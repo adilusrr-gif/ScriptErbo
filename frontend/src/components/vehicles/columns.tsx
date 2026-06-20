@@ -11,14 +11,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { QuickEditSelect } from "@/components/vehicles/quick-edit-select"
 import { QuickEditText } from "@/components/vehicles/quick-edit-text"
-import {
-  PAYMENT_BADGE_VARIANT,
-  PAYMENT_STATUS,
-  STATUS_BADGE_VARIANT,
-  VEHICLE_STATUS,
-} from "@/lib/constants"
+import { paymentBadgeVariant, statusBadgeVariant } from "@/lib/constants"
 import type { Vehicle } from "@/types/vehicle"
 
 interface ColumnActions {
@@ -59,20 +53,16 @@ export function buildVehicleColumns({
   return [
     {
       accessorKey: "id",
-      header: sortableHeader("ID"),
+      header: sortableHeader("№"),
       cell: ({ row }) => <span className="text-muted-foreground">{row.original.id}</span>,
       size: 60,
     },
     {
       accessorKey: "vehicleType",
       header: sortableHeader("Вид техники"),
-    },
-    {
-      accessorKey: "brand",
-      header: sortableHeader("Марка"),
       cell: ({ row }) => (
         <Link href={`/vehicles/${row.original.id}`} className="font-medium hover:underline">
-          {row.original.brand}
+          {row.original.vehicleType}
         </Link>
       ),
     },
@@ -103,11 +93,11 @@ export function buildVehicleColumns({
       accessorKey: "status",
       header: "Статус",
       cell: ({ row }) => (
-        <QuickEditSelect
+        <QuickEditText
           value={row.original.status}
-          options={VEHICLE_STATUS}
-          badgeVariant={STATUS_BADGE_VARIANT}
-          onChange={(value) => onUpdateField(row.original.id, "status", value)}
+          placeholder="Не указан"
+          badgeVariant={statusBadgeVariant}
+          onSave={(value) => onUpdateField(row.original.id, "status", value)}
         />
       ),
     },
@@ -126,11 +116,11 @@ export function buildVehicleColumns({
       accessorKey: "paymentStatus",
       header: "Оплата",
       cell: ({ row }) => (
-        <QuickEditSelect
+        <QuickEditText
           value={row.original.paymentStatus}
-          options={PAYMENT_STATUS}
-          badgeVariant={PAYMENT_BADGE_VARIANT}
-          onChange={(value) => onUpdateField(row.original.id, "paymentStatus", value)}
+          placeholder="Нет данных"
+          badgeVariant={paymentBadgeVariant}
+          onSave={(value) => onUpdateField(row.original.id, "paymentStatus", value)}
         />
       ),
     },

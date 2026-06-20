@@ -30,9 +30,9 @@ export default function BookingsPage() {
     if (!data) return []
     const query = search.trim().toLowerCase()
     return data.filter((vehicle) => {
-      if (vehicle.status !== "Бронь") return false
+      if (!vehicle.status.trim().toLowerCase().includes("брон")) return false
       if (!query) return true
-      return [vehicle.brand, vehicle.model, vehicle.buyerCompany, vehicle.contract]
+      return [vehicle.vehicleType, vehicle.model, vehicle.buyerCompany, vehicle.contract]
         .join(" ")
         .toLowerCase()
         .includes(query)

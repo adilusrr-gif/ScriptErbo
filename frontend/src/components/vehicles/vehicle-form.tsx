@@ -22,12 +22,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  DELIVERY_STATUS,
-  PAYMENT_STATUS,
-  VEHICLE_STATUS,
-  VEHICLE_TYPES,
-} from "@/lib/constants"
+import { YES_NO_OPTIONS } from "@/lib/constants"
 import { vehicleFormSchema, type VehicleFormValues } from "@/lib/validations/vehicle-schema"
 
 interface VehicleFormProps {
@@ -35,6 +30,90 @@ interface VehicleFormProps {
   onSubmit: (values: VehicleFormValues) => void
   isSubmitting?: boolean
   submitLabel?: string
+}
+
+interface TextFieldConfig {
+  name: keyof VehicleFormValues
+  label: string
+  type?: "text" | "number" | "date"
+}
+
+function TextFields({
+  control,
+  fields,
+}: {
+  control: ReturnType<typeof useForm<VehicleFormValues>>["control"]
+  fields: TextFieldConfig[]
+}) {
+  return (
+    <>
+      {fields.map(({ name, label, type = "text" }) => (
+        <FormField
+          key={name}
+          control={control}
+          name={name}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{label}</FormLabel>
+              <FormControl>
+                {type === "number" ? (
+                  <Input
+                    type="number"
+                    {...field}
+                    value={(field.value as number | null) ?? ""}
+                    onChange={(e) =>
+                      field.onChange(e.target.value === "" ? null : Number(e.target.value))
+                    }
+                  />
+                ) : (
+                  <Input type={type} {...field} value={(field.value as string) ?? ""} />
+                )}
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      ))}
+    </>
+  )
+}
+
+function YesNoField({
+  control,
+  name,
+  label,
+}: {
+  control: ReturnType<typeof useForm<VehicleFormValues>>["control"]
+  name: keyof VehicleFormValues
+  label: string
+}) {
+  return (
+    <FormField
+      control={control}
+      name={name}
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>{label}</FormLabel>
+          <Select
+            value={(field.value as string) || ""}
+            onValueChange={(value) => field.onChange(value ?? "")}
+          >
+            <FormControl>
+              <SelectTrigger className="w-full"><SelectValue placeholder="—" /></SelectTrigger>
+            </FormControl>
+            <SelectContent>
+              {YES_NO_OPTIONS.map((option) => (
+                <SelectItem key={option || "empty"} value={option}>
+                  {option || "—"}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  )
 }
 
 export function VehicleForm({
@@ -56,99 +135,30 @@ export function VehicleForm({
             <CardTitle>Основная информация</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <FormField
+            <TextFields
               control={form.control}
-              name="vehicleType"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Вид техники</FormLabel>
-                  <Select value={field.value} onValueChange={(value) => value && field.onChange(value)}>
-                    <FormControl>
-                      <SelectTrigger className="w-full"><SelectValue placeholder="Выберите вид" /></SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {VEHICLE_TYPES.map((type) => (
-                        <SelectItem key={type} value={type}>{type}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
+              fields={[
+                { name: "vehicleType", label: "Вид техники" },
+                { name: "model", label: "Модель" },
+                { name: "year", label: "Год выпуска", type: "number" },
+                { name: "pr", label: "ПР" },
+                { name: "vin", label: "VIN" },
+                { name: "fullVin", label: "Полный VIN" },
+              ]}
             />
-            <FormField
-              control={form.control}
-              name="brand"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Марка</FormLabel>
-                  <FormControl><Input {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="model"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Модель</FormLabel>
-                  <FormControl><Input {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="year"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Год выпуска</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      {...field}
-                      value={field.value ?? ""}
-                      onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="vin"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>VIN</FormLabel>
-                  <FormControl><Input {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="fullVin"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Полный VIN</FormLabel>
-                  <FormControl><Input {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="company"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Компания</FormLabel>
-                  <FormControl><Input {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Документы</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <YesNoField control={form.control} name="sbkts" label="СБКТС" />
+            <YesNoField control={form.control} name="customsCleared" label="Растаможка" />
+            <YesNoField control={form.control} name="recyclingFee" label="Утиль" />
+            <YesNoField control={form.control} name="epts" label="ЭПТС" />
+            <YesNoField control={form.control} name="trafficRegistration" label="Учет ГАИ" />
           </CardContent>
         </Card>
 
@@ -157,169 +167,72 @@ export function VehicleForm({
             <CardTitle>Статус и менеджер</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <FormField
+            <TextFields
               control={form.control}
-              name="status"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Статус</FormLabel>
-                  <Select value={field.value} onValueChange={(value) => value && field.onChange(value)}>
-                    <FormControl>
-                      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {VEHICLE_STATUS.map((status) => (
-                        <SelectItem key={status} value={status}>{status}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="manager"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Менеджер</FormLabel>
-                  <FormControl><Input {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="buyerCompany"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Компания покупателя</FormLabel>
-                  <FormControl><Input {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="contract"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Договор</FormLabel>
-                  <FormControl><Input {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              fields={[
+                { name: "company", label: "Компания" },
+                { name: "status", label: "Статус" },
+                { name: "manager", label: "Менеджер" },
+                { name: "statusSecondary", label: "Статус (доп.)" },
+                { name: "managerSecondary", label: "Менеджер (доп.)" },
+              ]}
             />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Бронь и оплата</CardTitle>
+            <CardTitle>Бронь, покупатель и оплата</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <FormField
+            <TextFields
               control={form.control}
-              name="bookingDate"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Дата брони</FormLabel>
-                  <FormControl><Input type="date" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="paymentStatus"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Статус оплаты</FormLabel>
-                  <Select value={field.value} onValueChange={(value) => value && field.onChange(value)}>
-                    <FormControl>
-                      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {PAYMENT_STATUS.map((status) => (
-                        <SelectItem key={status} value={status}>{status}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="paymentDate"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Дата оплаты</FormLabel>
-                  <FormControl><Input type="date" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              fields={[
+                { name: "bookingDate", label: "Дата брони", type: "date" },
+                { name: "buyerCompany", label: "Компания покупателя" },
+                { name: "contract", label: "Договор" },
+                { name: "dkpContract", label: "ДКП и № договора" },
+                { name: "paymentStatus", label: "Статус оплаты" },
+                { name: "paymentDate", label: "Дата оплаты", type: "date" },
+              ]}
             />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Доставка</CardTitle>
+            <CardTitle>Логистика</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <FormField
+            <TextFields
               control={form.control}
-              name="delivery"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Доставка</FormLabel>
-                  <Select value={field.value} onValueChange={(value) => value && field.onChange(value)}>
-                    <FormControl>
-                      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {DELIVERY_STATUS.map((status) => (
-                        <SelectItem key={status} value={status}>{status}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
+              fields={[
+                { name: "location", label: "Местонахождение" },
+                { name: "arrivalDate", label: "Дата прибытия на склад", type: "date" },
+                { name: "departureDate", label: "Дата выхода со склада", type: "date" },
+                { name: "currentState", label: "Текущее состояние" },
+                { name: "delivery", label: "Доставка" },
+                { name: "carrier", label: "Перевозчик" },
+                { name: "route", label: "Маршрут" },
+                { name: "arrivalDateLegacy", label: "Дата прибытия (старое поле)", type: "date" },
+              ]}
             />
-            <FormField
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Дополнительные поля</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <TextFields
               control={form.control}
-              name="carrier"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Перевозчик</FormLabel>
-                  <FormControl><Input {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="route"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Маршрут</FormLabel>
-                  <FormControl><Input {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="arrivalDate"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Дата прибытия</FormLabel>
-                  <FormControl><Input type="date" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              fields={[
+                { name: "app", label: "АПП" },
+                { name: "rjv", label: "rjv" },
+                { name: "months", label: "мес" },
+                { name: "yearSecondary", label: "Год (доп.)", type: "number" },
+              ]}
             />
           </CardContent>
         </Card>
@@ -335,7 +248,7 @@ export function VehicleForm({
               render={({ field }) => (
                 <FormItem>
                   <FormControl>
-                    <Textarea rows={4} {...field} />
+                    <Textarea rows={4} {...field} value={(field.value as string) ?? ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

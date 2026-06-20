@@ -25,11 +25,15 @@ import {
 } from "@/components/ui/alert-dialog"
 import type { Vehicle } from "@/types/vehicle"
 
+function includesNormalized(value: string, needle: string) {
+  return value.trim().toLowerCase().includes(needle.trim().toLowerCase())
+}
+
 function matchesFilters(vehicle: Vehicle, filters: VehicleListFilters) {
   const search = filters.search.trim().toLowerCase()
   if (search) {
     const haystack = [
-      vehicle.brand,
+      vehicle.vehicleType,
       vehicle.model,
       vehicle.vin,
       vehicle.fullVin,
@@ -42,10 +46,10 @@ function matchesFilters(vehicle: Vehicle, filters: VehicleListFilters) {
       .toLowerCase()
     if (!haystack.includes(search)) return false
   }
-  if (filters.status !== "all" && vehicle.status !== filters.status) return false
-  if (filters.vehicleType !== "all" && vehicle.vehicleType !== filters.vehicleType) return false
-  if (filters.paymentStatus !== "all" && vehicle.paymentStatus !== filters.paymentStatus) return false
-  if (filters.delivery !== "all" && vehicle.delivery !== filters.delivery) return false
+  if (filters.status && !includesNormalized(vehicle.status, filters.status)) return false
+  if (filters.vehicleType && !includesNormalized(vehicle.vehicleType, filters.vehicleType)) return false
+  if (filters.paymentStatus && !includesNormalized(vehicle.paymentStatus, filters.paymentStatus)) return false
+  if (filters.delivery && !includesNormalized(vehicle.delivery, filters.delivery)) return false
   return true
 }
 
@@ -70,7 +74,7 @@ export default function VehiclesPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <VehicleFilters filters={filters} onChange={setFilters} />
-        <Button render={<Link href="/vehicles/new" />}>
+        <Button render={<Link href="/vehicles/new" />} nativeButton={false}>
           <PlusCircle className="mr-2 size-4" />
           Добавить технику
         </Button>

@@ -49,27 +49,7 @@ export default function VehicleDetailPage() {
     return <Skeleton className="h-96" />
   }
 
-  const defaultValues: VehicleFormValues = {
-    vehicleType: vehicle.vehicleType,
-    brand: vehicle.brand,
-    model: vehicle.model,
-    year: vehicle.year,
-    vin: vehicle.vin,
-    fullVin: vehicle.fullVin,
-    company: vehicle.company,
-    status: vehicle.status,
-    manager: vehicle.manager,
-    buyerCompany: vehicle.buyerCompany,
-    contract: vehicle.contract,
-    bookingDate: vehicle.bookingDate,
-    paymentStatus: vehicle.paymentStatus,
-    paymentDate: vehicle.paymentDate,
-    note: vehicle.note,
-    delivery: vehicle.delivery,
-    carrier: vehicle.carrier,
-    route: vehicle.route,
-    arrivalDate: vehicle.arrivalDate,
-  }
+  const defaultValues: VehicleFormValues = vehicle
 
   return (
     <div className="space-y-4">

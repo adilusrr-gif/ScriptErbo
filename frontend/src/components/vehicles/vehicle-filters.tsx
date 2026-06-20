@@ -4,14 +4,6 @@ import { Search, X } from "lucide-react"
 
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { DELIVERY_STATUS, PAYMENT_STATUS, VEHICLE_STATUS, VEHICLE_TYPES } from "@/lib/constants"
 
 export interface VehicleListFilters {
   search: string
@@ -23,10 +15,10 @@ export interface VehicleListFilters {
 
 export const defaultVehicleListFilters: VehicleListFilters = {
   search: "",
-  status: "all",
-  vehicleType: "all",
-  paymentStatus: "all",
-  delivery: "all",
+  status: "",
+  vehicleType: "",
+  paymentStatus: "",
+  delivery: "",
 }
 
 interface VehicleFiltersProps {
@@ -35,19 +27,10 @@ interface VehicleFiltersProps {
 }
 
 export function VehicleFilters({ filters, onChange }: VehicleFiltersProps) {
-  const hasActiveFilters =
-    filters.search !== "" ||
-    filters.status !== "all" ||
-    filters.vehicleType !== "all" ||
-    filters.paymentStatus !== "all" ||
-    filters.delivery !== "all"
+  const hasActiveFilters = Object.values(filters).some(Boolean)
 
   function set<K extends keyof VehicleListFilters>(key: K, value: VehicleListFilters[K]) {
     onChange({ ...filters, [key]: value })
-  }
-
-  function setIfPresent<K extends keyof VehicleListFilters>(key: K, value: string | null) {
-    if (value) set(key, value as VehicleListFilters[K])
   }
 
   return (
@@ -62,45 +45,30 @@ export function VehicleFilters({ filters, onChange }: VehicleFiltersProps) {
         />
       </div>
 
-      <Select value={filters.vehicleType} onValueChange={(v) => setIfPresent("vehicleType", v)}>
-        <SelectTrigger className="w-44"><SelectValue placeholder="Вид техники" /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Все виды</SelectItem>
-          {VEHICLE_TYPES.map((type) => (
-            <SelectItem key={type} value={type}>{type}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <Select value={filters.status} onValueChange={(v) => setIfPresent("status", v)}>
-        <SelectTrigger className="w-40"><SelectValue placeholder="Статус" /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Все статусы</SelectItem>
-          {VEHICLE_STATUS.map((status) => (
-            <SelectItem key={status} value={status}>{status}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <Select value={filters.paymentStatus} onValueChange={(v) => setIfPresent("paymentStatus", v)}>
-        <SelectTrigger className="w-44"><SelectValue placeholder="Статус оплаты" /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Любая оплата</SelectItem>
-          {PAYMENT_STATUS.map((status) => (
-            <SelectItem key={status} value={status}>{status}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <Select value={filters.delivery} onValueChange={(v) => setIfPresent("delivery", v)}>
-        <SelectTrigger className="w-44"><SelectValue placeholder="Доставка" /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Любая доставка</SelectItem>
-          {DELIVERY_STATUS.map((status) => (
-            <SelectItem key={status} value={status}>{status}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <Input
+        value={filters.vehicleType}
+        onChange={(e) => set("vehicleType", e.target.value)}
+        placeholder="Вид техники"
+        className="w-40"
+      />
+      <Input
+        value={filters.status}
+        onChange={(e) => set("status", e.target.value)}
+        placeholder="Статус"
+        className="w-40"
+      />
+      <Input
+        value={filters.paymentStatus}
+        onChange={(e) => set("paymentStatus", e.target.value)}
+        placeholder="Статус оплаты"
+        className="w-40"
+      />
+      <Input
+        value={filters.delivery}
+        onChange={(e) => set("delivery", e.target.value)}
+        placeholder="Доставка"
+        className="w-40"
+      />
 
       {hasActiveFilters && (
         <Button

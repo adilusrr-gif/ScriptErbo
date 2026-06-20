@@ -1,52 +1,86 @@
 import { z } from "zod"
 
+const yearField = z
+  .number()
+  .int()
+  .min(1950, "Некорректный год")
+  .max(new Date().getFullYear() + 1, "Некорректный год")
+  .nullable()
+
 export const vehicleFormSchema = z.object({
   vehicleType: z.string().min(1, "Укажите вид техники"),
-  brand: z.string().min(1, "Укажите марку"),
-  model: z.string().min(1, "Укажите модель"),
-  year: z
-    .number()
-    .int()
-    .min(1950, "Некорректный год")
-    .max(new Date().getFullYear() + 1, "Некорректный год")
-    .nullable(),
+  model: z.string(),
+  year: yearField,
+  pr: z.string(),
   vin: z.string(),
   fullVin: z.string(),
+  sbkts: z.string(),
+  customsCleared: z.string(),
+  recyclingFee: z.string(),
+  epts: z.string(),
+  trafficRegistration: z.string(),
   company: z.string(),
-  status: z.string().min(1, "Укажите статус"),
+  status: z.string(),
   manager: z.string(),
+  statusSecondary: z.string(),
+  managerSecondary: z.string(),
+  bookingDate: z.string(),
   buyerCompany: z.string(),
   contract: z.string(),
-  bookingDate: z.string(),
-  paymentStatus: z.string().min(1, "Укажите статус оплаты"),
+  paymentStatus: z.string(),
   paymentDate: z.string(),
+  location: z.string(),
+  arrivalDateLegacy: z.string(),
+  dkpContract: z.string(),
+  currentState: z.string(),
+  departureDate: z.string(),
   note: z.string(),
+  arrivalDate: z.string(),
+  app: z.string(),
+  rjv: z.string(),
+  months: z.string(),
   delivery: z.string(),
   carrier: z.string(),
   route: z.string(),
-  arrivalDate: z.string(),
+  yearSecondary: yearField,
 })
 
 export type VehicleFormValues = z.infer<typeof vehicleFormSchema>
 
 export const vehicleFormDefaults: VehicleFormValues = {
   vehicleType: "",
-  brand: "",
   model: "",
   year: null,
+  pr: "",
   vin: "",
   fullVin: "",
+  sbkts: "",
+  customsCleared: "",
+  recyclingFee: "",
+  epts: "",
+  trafficRegistration: "",
   company: "",
-  status: "Доступно",
+  status: "",
   manager: "",
+  statusSecondary: "",
+  managerSecondary: "",
+  bookingDate: "",
   buyerCompany: "",
   contract: "",
-  bookingDate: "",
-  paymentStatus: "Ожидает оплаты",
+  paymentStatus: "",
   paymentDate: "",
+  location: "",
+  arrivalDateLegacy: "",
+  dkpContract: "",
+  currentState: "",
+  departureDate: "",
   note: "",
-  delivery: "Не отправлено",
+  arrivalDate: "",
+  app: "",
+  rjv: "",
+  months: "",
+  delivery: "",
   carrier: "",
   route: "",
-  arrivalDate: "",
+  yearSecondary: null,
 }

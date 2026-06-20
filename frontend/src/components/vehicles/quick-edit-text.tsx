@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Pencil } from "lucide-react"
 
 import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
 import {
   Popover,
   PopoverContent,
@@ -14,9 +15,10 @@ interface QuickEditTextProps {
   value: string
   onSave: (value: string) => void
   placeholder?: string
+  badgeVariant?: (value: string) => "default" | "secondary" | "destructive" | "outline"
 }
 
-export function QuickEditText({ value, onSave, placeholder }: QuickEditTextProps) {
+export function QuickEditText({ value, onSave, placeholder, badgeVariant }: QuickEditTextProps) {
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState(value)
 
@@ -37,9 +39,13 @@ export function QuickEditText({ value, onSave, placeholder }: QuickEditTextProps
         onClick={(e) => e.stopPropagation()}
         className="group flex items-center gap-1.5 rounded px-1 py-0.5 text-left hover:bg-accent"
       >
-        <span className={value ? "" : "text-muted-foreground"}>
-          {value || placeholder || "—"}
-        </span>
+        {badgeVariant ? (
+          <Badge variant={badgeVariant(value)}>{value || placeholder || "—"}</Badge>
+        ) : (
+          <span className={value ? "" : "text-muted-foreground"}>
+            {value || placeholder || "—"}
+          </span>
+        )}
         <Pencil className="size-3 text-muted-foreground opacity-0 group-hover:opacity-100" />
       </PopoverTrigger>
       <PopoverContent

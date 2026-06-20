@@ -1,7 +1,26 @@
 /**
  * DashboardService.gs
  * Агрегированная статистика для главного экрана.
+ *
+ * В реальной таблице нет единого чистого поля "статус продажи" — "Статус
+ * брони" используется и для брони, и для общих рабочих статусов (Доступен
+ * для продажи / Ремонт / перемещение / ИП / офис), а "продано" как
+ * отдельное значение не встречается. Поэтому:
+ *  - Доступно / Бронь / Ремонт считаются по подстроке в status (без учёта
+ *    регистра и пробелов).
+ *  - Продано — эвристика по полю "Оплата (статус)" (оплата 100%).
+ *  - Ожидает оплаты — есть процент оплаты, но он меньше 100%.
+ * Если эта логика не подходит под ваш учёт — поправьте пороги ниже.
  */
+
+function normalizeStatus_(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function paymentPercent_(value) {
+  var match = String(value || "").match(/(\d+)\s*%/);
+  return match ? Number(match[1]) : null;
+}
 
 var DashboardService = {
   getStats: function () {
@@ -10,22 +29,29 @@ var DashboardService = {
     var total = vehicles.length;
     var available = 0;
     var booked = 0;
-    var sold = 0;
     var repair = 0;
+    var sold = 0;
     var awaitingPayment = 0;
 
     vehicles.forEach(function (vehicle) {
-      if (vehicle.status === "Доступно") available++;
-      if (vehicle.status === "Бронь") booked++;
-      if (vehicle.status === "Продано") sold++;
-      if (vehicle.status === "Ремонт") repair++;
-      if (vehicle.paymentStatus === "Ожидает оплаты") awaitingPayment++;
+      var status = normalizeStatus_(vehicle.status);
+      if (status.indexOf("доступ") !== -1) available++;
+      if (status.indexOf("брон") !== -1) booked++;
+      if (status.indexOf("ремонт") !== -1) repair++;
+
+      var percent = paymentPercent_(vehicle.paymentStatus);
+      if (percent !== null) {
+        if (percent >= 100) sold++;
+        else awaitingPayment++;
+      }
     });
 
     var recentChanges = vehicles
-      .slice()
+      .filter(function (vehicle) {
+        return !!vehicle.updatedAt;
+      })
       .sort(function (a, b) {
-        return new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0);
+        return new Date(b.updatedAt) - new Date(a.updatedAt);
       })
       .slice(0, 10);
 

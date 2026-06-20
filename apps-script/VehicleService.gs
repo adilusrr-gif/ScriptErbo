@@ -3,16 +3,25 @@
  * CRUD и поиск/фильтрация техники в Google Sheets.
  */
 
+function normalizeText_(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+/** Строка считается "пустой"/служебной, если в ней нет ни вида техники, ни модели, ни VIN. */
+function isBlankVehicleRow_(vehicle) {
+  return !vehicle.vehicleType && !vehicle.model && !vehicle.vin && !vehicle.fullVin;
+}
+
 var VehicleService = {
   getAll: function () {
     var sheet = getSheet_();
-    var data = getAllRows_(sheet);
-    return data.rows
-      .map(function (row) {
-        return rowToObject_(data.headers, row);
+    return getAllRows_(sheet)
+      .map(rowToObject_)
+      .filter(function (vehicle) {
+        return !isBlankVehicleRow_(vehicle);
       })
       .sort(function (a, b) {
-        return a.id - b.id;
+        return (a.id || 0) - (b.id || 0);
       });
   },
 
@@ -31,14 +40,13 @@ var VehicleService = {
     lock.waitLock(10000);
     try {
       var sheet = getSheet_();
-      var headers = getHeaderRow_(sheet);
       var id = getNextId_(sheet);
-      var vehicle = Object.assign({}, payload, {
-        id: id,
-        updatedAt: nowIso_(),
-      });
-      sheet.appendRow(objectToRow_(headers, vehicle));
-      return vehicle;
+      var row = objectToRow_(
+        blankRow_(),
+        Object.assign({}, payload, { id: id, updatedAt: nowIso_() })
+      );
+      sheet.appendRow(row);
+      return rowToObject_(row);
     } finally {
       lock.releaseLock();
     }
@@ -53,19 +61,14 @@ var VehicleService = {
       if (rowIndex === -1) {
         throw new Error("Техника с id=" + id + " не найдена");
       }
-      var headers = getHeaderRow_(sheet);
       var existingRow = sheet
-        .getRange(rowIndex, 1, 1, headers.length)
+        .getRange(rowIndex, 1, 1, CONFIG.TOTAL_COLUMNS)
         .getValues()[0];
-      var existing = rowToObject_(headers, existingRow);
-      var updated = Object.assign({}, existing, payload, {
-        id: existing.id,
-        updatedAt: nowIso_(),
-      });
-      sheet
-        .getRange(rowIndex, 1, 1, headers.length)
-        .setValues([objectToRow_(headers, updated)]);
-      return updated;
+      var updates = Object.assign({}, payload, { updatedAt: nowIso_() });
+      delete updates.id; // id неизменяем
+      var newRow = objectToRow_(existingRow, updates);
+      sheet.getRange(rowIndex, 1, 1, CONFIG.TOTAL_COLUMNS).setValues([newRow]);
+      return rowToObject_(newRow);
     } finally {
       lock.releaseLock();
     }
@@ -88,19 +91,24 @@ var VehicleService = {
   },
 
   search: function (query) {
-    var needle = String(query || "").toLowerCase().trim();
+    var needle = normalizeText_(query);
     if (!needle) return this.getAll();
     return this.getAll().filter(function (vehicle) {
       return [
-        vehicle.brand,
+        vehicle.vehicleType,
         vehicle.model,
         vehicle.vin,
         vehicle.fullVin,
-        vehicle.contract,
-        vehicle.manager,
         vehicle.company,
+        vehicle.manager,
+        vehicle.managerSecondary,
         vehicle.buyerCompany,
+        vehicle.contract,
+        vehicle.dkpContract,
         vehicle.note,
+        vehicle.route,
+        vehicle.carrier,
+        vehicle.location,
       ]
         .join(" ")
         .toLowerCase()
@@ -121,7 +129,7 @@ var VehicleService = {
       return filterableKeys.every(function (key) {
         var value = params[key];
         if (!value) return true;
-        return String(vehicle[key]) === String(value);
+        return normalizeText_(vehicle[key]).indexOf(normalizeText_(value)) !== -1;
       });
     });
   },

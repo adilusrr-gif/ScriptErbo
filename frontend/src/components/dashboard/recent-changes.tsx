@@ -2,7 +2,7 @@ import Link from "next/link"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { STATUS_BADGE_VARIANT } from "@/lib/constants"
+import { statusBadgeVariant } from "@/lib/constants"
 import type { Vehicle } from "@/types/vehicle"
 
 function formatDateTime(value: string) {
@@ -35,11 +35,11 @@ export function RecentChanges({ vehicles }: { vehicles: Vehicle[] }) {
                   href={`/vehicles/${vehicle.id}`}
                   className="min-w-0 flex-1 truncate text-sm font-medium hover:underline"
                 >
-                  {vehicle.brand} {vehicle.model}{" "}
+                  {vehicle.vehicleType} {vehicle.model}{" "}
                   <span className="text-muted-foreground">· {vehicle.vin || "без VIN"}</span>
                 </Link>
-                <Badge variant={STATUS_BADGE_VARIANT[vehicle.status] ?? "outline"}>
-                  {vehicle.status}
+                <Badge variant={statusBadgeVariant(vehicle.status)}>
+                  {vehicle.status || "—"}
                 </Badge>
                 <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">
                   {formatDateTime(vehicle.updatedAt)}

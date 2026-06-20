@@ -1,26 +1,29 @@
 /**
  * Utils.gs
- * Вспомогательные функции: доступ к листу, преобразование строк таблицы
- * в JSON-объекты и обратно, формирование ответов REST API.
+ * Доступ к листу, преобразование строк таблицы в JSON-объекты и обратно
+ * (по индексу столбца), формирование ответов REST API.
  */
 
 function getSheet_() {
   var spreadsheet = getSpreadsheet_();
   var sheet = spreadsheet.getSheetByName(CONFIG.SHEET_NAME);
   if (!sheet) {
-    sheet = spreadsheet.insertSheet(CONFIG.SHEET_NAME);
-    var headers = CONFIG.FIELDS.map(function (field) {
-      return field.header;
-    });
-    sheet.appendRow(headers);
-    sheet.setFrozenRows(1);
+    throw new Error(
+      'Лист "' + CONFIG.SHEET_NAME + '" не найден в таблице. Проверьте ' +
+        "название вкладки или SPREADSHEET_ID."
+    );
   }
+  ensureUpdatedAtColumn_(sheet);
   return sheet;
 }
 
-function getHeaderRow_(sheet) {
-  var lastColumn = Math.max(sheet.getLastColumn(), CONFIG.FIELDS.length);
-  return sheet.getRange(1, 1, 1, lastColumn).getValues()[0];
+/** Добавляет служебный столбец "Обновлено" в конец таблицы, если его нет. */
+function ensureUpdatedAtColumn_(sheet) {
+  var column = CONFIG.UPDATED_AT_INDEX + 1; // 1-based
+  var header = sheet.getRange(1, column).getValue();
+  if (!header) {
+    sheet.getRange(1, column).setValue(CONFIG.UPDATED_AT_HEADER);
+  }
 }
 
 function nowIso_() {
@@ -29,52 +32,80 @@ function nowIso_() {
 
 function coerceValue_(key, value) {
   if (CONFIG.NUMERIC_FIELDS.indexOf(key) !== -1) {
-    if (value === "" || value === null || value === undefined) return "";
+    if (value === "" || value === null || value === undefined) return null;
     var num = Number(value);
-    return isNaN(num) ? "" : num;
+    return isNaN(num) ? null : num;
   }
   if (value === null || value === undefined) return "";
   if (value instanceof Date) return value.toISOString();
   return value;
 }
 
-/** Преобразует строку листа в объект по заголовкам столбцов. */
-function rowToObject_(headers, row) {
+function blankRow_() {
+  var row = [];
+  for (var i = 0; i < CONFIG.TOTAL_COLUMNS; i++) row.push("");
+  return row;
+}
+
+/** Дополняет строку до полной ширины таблицы, ничего не теряя. */
+function normalizeRowWidth_(row) {
+  var result = row.slice(0, CONFIG.TOTAL_COLUMNS);
+  while (result.length < CONFIG.TOTAL_COLUMNS) result.push("");
+  return result;
+}
+
+/** Строка листа -> JSON-объект по индексам из CONFIG.FIELDS. */
+function rowToObject_(row) {
   var obj = {};
   CONFIG.FIELDS.forEach(function (field) {
-    var columnIndex = headers.indexOf(field.header);
-    var rawValue = columnIndex === -1 ? "" : row[columnIndex];
-    obj[field.key] = coerceValue_(field.key, rawValue);
+    obj[field.key] = coerceValue_(field.key, row[field.index]);
+  });
+  CONFIG.FALLBACK_MERGES.forEach(function (merge) {
+    if (!obj[merge.key]) {
+      var fallback = row[merge.fallbackIndex];
+      if (fallback) obj[merge.key] = fallback;
+    }
   });
   return obj;
 }
 
-/** Преобразует объект (camelCase) в массив значений в порядке заголовков листа. */
-function objectToRow_(headers, obj) {
-  return headers.map(function (header) {
-    var field = CONFIG.FIELDS.filter(function (f) {
-      return f.header === header;
-    })[0];
-    if (!field) return "";
-    var value = obj[field.key];
-    return value === undefined || value === null ? "" : value;
+/**
+ * Накладывает изменения (updates) на существующую строку (baseRow),
+ * перезаписывая только столбцы из CONFIG.FIELDS, присутствующие в updates.
+ * Все остальные столбцы (включая немаппленные легаси-дубли) остаются
+ * нетронутыми — это критично, так как в реальной таблице есть данные
+ * вне модели приложения.
+ */
+function objectToRow_(baseRow, updates) {
+  var row = normalizeRowWidth_(baseRow);
+  CONFIG.FIELDS.forEach(function (field) {
+    if (updates[field.key] !== undefined) {
+      var value = updates[field.key];
+      row[field.index] = value === null ? "" : value;
+    }
   });
+  return row;
 }
 
 function getAllRows_(sheet) {
   var lastRow = sheet.getLastRow();
-  var lastColumn = Math.max(sheet.getLastColumn(), CONFIG.FIELDS.length);
-  if (lastRow < 2) return { headers: getHeaderRow_(sheet), rows: [] };
-  var headers = getHeaderRow_(sheet);
-  var values = sheet.getRange(2, 1, lastRow - 1, lastColumn).getValues();
-  return { headers: headers, rows: values };
+  if (lastRow < 2) return [];
+  return sheet
+    .getRange(2, 1, lastRow - 1, CONFIG.TOTAL_COLUMNS)
+    .getValues();
+}
+
+function getIdColumnIndex_() {
+  return CONFIG.FIELDS.filter(function (f) {
+    return f.key === "id";
+  })[0].index;
 }
 
 function findRowIndexById_(sheet, id) {
-  var data = getAllRows_(sheet);
-  var idColumn = data.headers.indexOf("ID");
-  for (var i = 0; i < data.rows.length; i++) {
-    if (Number(data.rows[i][idColumn]) === Number(id)) {
+  var rows = getAllRows_(sheet);
+  var idColumn = getIdColumnIndex_();
+  for (var i = 0; i < rows.length; i++) {
+    if (Number(rows[i][idColumn]) === Number(id)) {
       return i + 2; // +1 заголовок, +1 1-based индекс
     }
   }
@@ -82,10 +113,10 @@ function findRowIndexById_(sheet, id) {
 }
 
 function getNextId_(sheet) {
-  var data = getAllRows_(sheet);
-  var idColumn = data.headers.indexOf("ID");
+  var rows = getAllRows_(sheet);
+  var idColumn = getIdColumnIndex_();
   var maxId = 0;
-  data.rows.forEach(function (row) {
+  rows.forEach(function (row) {
     var value = Number(row[idColumn]);
     if (!isNaN(value) && value > maxId) maxId = value;
   });
