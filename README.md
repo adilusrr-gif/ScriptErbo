@@ -44,6 +44,12 @@ frontend/      Next.js приложение
 6. Скопируйте полученный URL вида
    `https://script.google.com/macros/s/.../exec` — он понадобится фронтенду.
 
+> Не запускайте `doGet`/`doPost` вручную через ▶ Run в редакторе — они
+> ожидают объект запроса `e`, которого нет при ручном запуске, и упадут с
+> `TypeError: Cannot read properties of undefined (reading 'parameter')`.
+> Для авторизации и проверки используйте `setupSheet`, а API проверяйте,
+> открыв опубликованный `/exec` URL в браузере (для GET) или из фронтенда.
+
 ### Важно про CORS
 
 Apps Script Web App не умеет отвечать на preflight-запросы `OPTIONS`. Чтобы

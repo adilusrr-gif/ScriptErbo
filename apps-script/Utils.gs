@@ -138,7 +138,7 @@ function errorResponse_(message) {
 }
 
 function parseRequestBody_(e) {
-  if (!e.postData || !e.postData.contents) {
+  if (!e || !e.postData || !e.postData.contents) {
     throw new Error("Тело запроса пустое");
   }
   try {

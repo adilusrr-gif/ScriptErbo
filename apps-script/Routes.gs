@@ -15,7 +15,7 @@
  */
 
 function handleGet_(e) {
-  var params = e.parameter || {};
+  var params = (e && e.parameter) || {};
   var route = params.route;
 
   try {
@@ -45,7 +45,7 @@ function handleGet_(e) {
 }
 
 function handlePost_(e) {
-  var params = e.parameter || {};
+  var params = (e && e.parameter) || {};
   var route = params.route;
 
   try {
