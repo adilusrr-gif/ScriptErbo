@@ -45,3 +45,15 @@ function debugListSheets() {
   Logger.log("Sheets (" + names.length + "): " + JSON.stringify(names));
   Logger.log("Looking for: " + JSON.stringify(CONFIG.SHEET_NAME));
 }
+
+/**
+ * Запустите вручную (Run), если API возвращает ошибку про разрешение
+ * UrlFetchApp.fetch / script.external_request. Эта функция явно вызывает
+ * Sheets API, поэтому Apps Script покажет запрос на новое разрешение —
+ * нажмите Review permissions → Advanced → Go to ... (unsafe) → Allow.
+ */
+function debugAuthScopes() {
+  var sheet = getSheet_();
+  var hidden = getHiddenRowSet_(sheet);
+  Logger.log("OK, hidden rows count: " + Object.keys(hidden).length);
+}
