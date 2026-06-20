@@ -22,15 +22,11 @@ var VehicleService = {
   getAll: function () {
     var sheet = getSheet_();
     var rows = getAllRows_(sheet);
+    var hidden = getHiddenRowSet_(sheet);
     var result = [];
     for (var i = 0; i < rows.length; i++) {
       var sheetRow = i + 2; // +1 заголовок, +1 1-based индекс
-      if (
-        sheet.isRowHiddenByFilter(sheetRow) ||
-        sheet.isRowHiddenByUser(sheetRow)
-      ) {
-        continue;
-      }
+      if (hidden[sheetRow]) continue;
       var vehicle = rowToObject_(rows[i]);
       if (!isBlankVehicleRow_(vehicle)) result.push(vehicle);
     }

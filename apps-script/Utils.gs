@@ -131,6 +131,46 @@ function getAllRows_(sheet) {
   return rows.map(normalizeRowWidth_);
 }
 
+/**
+ * Возвращает множество номеров строк (1-based), скрытых фильтром или
+ * вручную — одним пакетным запросом к Sheets API. Поштучные вызовы
+ * isRowHiddenByFilter/isRowHiddenByUser на ~1500 строк были слишком
+ * медленными (десятки секунд), поэтому статус скрытости всех строк
+ * читается за один HTTP-запрос.
+ */
+function getHiddenRowSet_(sheet) {
+  var spreadsheetId = sheet.getParent().getId();
+  var url =
+    "https://sheets.googleapis.com/v4/spreadsheets/" +
+    spreadsheetId +
+    "?fields=sheets(properties.sheetId,data.rowMetadata)" +
+    "&ranges=" +
+    encodeURIComponent(sheet.getName());
+  var response = UrlFetchApp.fetch(url, {
+    headers: { Authorization: "Bearer " + ScriptApp.getOAuthToken() },
+    muteHttpExceptions: true,
+  });
+  if (response.getResponseCode() !== 200) {
+    return {}; // не удалось получить — считаем, что ничего не скрыто
+  }
+  var json = JSON.parse(response.getContentText());
+  var sheetId = sheet.getSheetId();
+  var sheetData = (json.sheets || []).filter(function (s) {
+    return s.properties && s.properties.sheetId === sheetId;
+  })[0];
+  var rowMetadata =
+    sheetData && sheetData.data && sheetData.data[0]
+      ? sheetData.data[0].rowMetadata || []
+      : [];
+  var hidden = {};
+  rowMetadata.forEach(function (meta, index) {
+    if (meta && (meta.hiddenByUser || meta.hiddenByFilter)) {
+      hidden[index + 1] = true; // +1: индекс массива 0-based -> номер строки 1-based
+    }
+  });
+  return hidden;
+}
+
 function getIdColumnIndex_() {
   return CONFIG.FIELDS.filter(function (f) {
     return f.key === "id";
