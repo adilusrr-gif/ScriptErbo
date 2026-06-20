@@ -95,7 +95,10 @@ function debugHiddenRows() {
   });
   var json = JSON.parse(response.getContentText());
   var sheetData = (json.sheets || []).filter(function (s) {
-    return s.properties && s.properties.sheetId === sheetId;
+    // sheetId 0 (первый лист в файле) Google часто не включает в JSON —
+    // отсутствующее поле тогда нужно считать нулём, а не "не совпало".
+    var sid = s.properties ? s.properties.sheetId || 0 : -1;
+    return sid === sheetId;
   })[0];
   Logger.log(
     "Filter views on this sheet: " +

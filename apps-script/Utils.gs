@@ -154,10 +154,11 @@ function getHiddenRowSet_(sheet) {
     return {}; // не удалось получить — считаем, что ничего не скрыто
   }
   var json = JSON.parse(response.getContentText());
-  var sheetId = sheet.getSheetId();
-  var sheetData = (json.sheets || []).filter(function (s) {
-    return s.properties && s.properties.sheetId === sheetId;
-  })[0];
+  // Запрос ограничен через ranges=<имя листа>, поэтому ответ содержит
+  // ровно один лист — этот. Не сравниваем sheetId явно: Google не
+  // включает в JSON поле sheetId, если оно равно 0 (первый лист в
+  // файле), и строгое сравнение с 0 в этом случае всегда ложно.
+  var sheetData = (json.sheets || [])[0];
   var rowMetadata =
     sheetData && sheetData.data && sheetData.data[0]
       ? sheetData.data[0].rowMetadata || []
