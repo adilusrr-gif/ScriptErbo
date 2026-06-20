@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Varela_Round, Nunito_Sans } from "next/font/google";
 import "./globals.css";
 
 import { QueryProvider } from "@/providers/query-provider";
@@ -7,13 +7,14 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { AppShell } from "@/components/layout/app-shell";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const varelaRound = Varela_Round({
+  variable: "--font-heading",
   subsets: ["latin"],
+  weight: "400",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const nunitoSans = Nunito_Sans({
+  variable: "--font-sans",
   subsets: ["latin"],
 });
 
@@ -30,7 +31,7 @@ export default function RootLayout({
   return (
     <html
       lang="ru"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${varelaRound.variable} ${nunitoSans.variable} h-full antialiased`}
     >
       <body className="min-h-full">
         <QueryProvider>

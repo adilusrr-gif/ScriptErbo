@@ -21,7 +21,7 @@ export function Header() {
   return (
     <header className="flex h-16 items-center gap-3 border-b bg-background px-4 md:px-6">
       <MobileNav />
-      <h1 className="text-lg font-semibold">{pageTitle(pathname)}</h1>
+      <h1 className="font-heading text-lg font-semibold">{pageTitle(pathname)}</h1>
     </header>
   )
 }
