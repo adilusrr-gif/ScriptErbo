@@ -108,3 +108,24 @@ function debugHiddenRows() {
     "Basic filter present: " + !!(sheetData && sheetData.basicFilter)
   );
 }
+
+/**
+ * Печатает в лог "сырой" ответ Sheets API для первых 5 строк, чтобы
+ * увидеть точную структуру JSON без догадок. Запустите вручную.
+ */
+function debugRawSheetsApi() {
+  var sheet = getSheet_();
+  var spreadsheetId = sheet.getParent().getId();
+  var url =
+    "https://sheets.googleapis.com/v4/spreadsheets/" +
+    spreadsheetId +
+    "?ranges=" +
+    encodeURIComponent(sheet.getName() + "!A1:C6") +
+    "&fields=sheets.data.rowMetadata,sheets.basicFilter,sheets.properties.sheetId";
+  var response = UrlFetchApp.fetch(url, {
+    headers: { Authorization: "Bearer " + ScriptApp.getOAuthToken() },
+    muteHttpExceptions: true,
+  });
+  Logger.log("Status: " + response.getResponseCode());
+  Logger.log("Body: " + response.getContentText());
+}
