@@ -19,20 +19,23 @@ function doPost(e) {
 /**
  * Запустите один раз вручную из редактора Apps Script (выбрав функцию
  * setupSheet в выпадающем списке и нажав Run) перед первым использованием
- * API. Лист "Список техники" должен уже существовать — функция только
+ * API. Лист "Остатки БАЗА" должен уже существовать — функция только
  * добавляет служебный столбец "Обновлено" в его конец (если его ещё нет)
  * для отслеживания последних изменений на Dashboard. Существующие данные
  * не трогаются.
+ *
+ * Также убедитесь, что в Services (слева в редакторе) добавлен сервис
+ * Google Sheets API — он нужен для быстрой проверки скрытых фильтром
+ * строк (см. getHiddenRowSet_ в Utils.gs).
  */
 function setupSheet() {
   ensureUpdatedAtColumn_(getSheet_());
 }
 
 /**
- * Временная диагностическая функция. Запустите вручную (Run) и откройте
- * View → Logs (или Executions), чтобы увидеть, какую таблицу и какие
- * листы видит скрипт на самом деле — это помогает найти причину ошибки
- * "Лист ... не найден в таблице".
+ * Диагностика: показывает, какую таблицу и какие листы видит скрипт —
+ * полезно, если API возвращает "Лист ... не найден в таблице".
+ * Запустите вручную и откройте View → Logs.
  */
 function debugListSheets() {
   var spreadsheet = getSpreadsheet_();
@@ -44,88 +47,4 @@ function debugListSheets() {
   });
   Logger.log("Sheets (" + names.length + "): " + JSON.stringify(names));
   Logger.log("Looking for: " + JSON.stringify(CONFIG.SHEET_NAME));
-}
-
-/**
- * Запустите вручную (Run), если API возвращает ошибку про разрешение
- * UrlFetchApp.fetch / script.external_request. Эта функция явно вызывает
- * Sheets API, поэтому Apps Script покажет запрос на новое разрешение —
- * нажмите Review permissions → Advanced → Go to ... (unsafe) → Allow.
- */
-function debugAuthScopes() {
-  var sheet = getSheet_();
-  var hidden = getHiddenRowSet_(sheet);
-  Logger.log("OK, hidden rows count: " + Object.keys(hidden).length);
-}
-
-/**
- * Временная диагностика: сравнивает два способа определения скрытых
- * строк на первых 200 строках и проверяет наличие базового фильтра.
- * Запустите вручную и посмотрите Logs.
- */
-function debugHiddenRows() {
-  var sheet = getSheet_();
-  var lastRow = Math.min(sheet.getLastRow(), 200);
-  var apiHidden = getHiddenRowSet_(sheet);
-  var sampleHiddenByApps = 0;
-  var sampleHiddenByApi = 0;
-  var mismatches = [];
-  for (var r = 2; r <= lastRow; r++) {
-    var hiddenApps = sheet.isRowHiddenByFilter(r) || sheet.isRowHiddenByUser(r);
-    var hiddenApi = !!apiHidden[r];
-    if (hiddenApps) sampleHiddenByApps++;
-    if (hiddenApi) sampleHiddenByApi++;
-    if (hiddenApps !== hiddenApi && mismatches.length < 5) mismatches.push(r);
-  }
-  Logger.log("Sampled rows 2-" + lastRow);
-  Logger.log("Hidden via Apps Script per-row check: " + sampleHiddenByApps);
-  Logger.log("Hidden via Sheets API batch check: " + sampleHiddenByApi);
-  Logger.log("Example mismatched rows: " + JSON.stringify(mismatches));
-  Logger.log("Has basic filter (sheet.getFilter()): " + (sheet.getFilter() !== null));
-
-  var spreadsheetId = sheet.getParent().getId();
-  var sheetId = sheet.getSheetId();
-  var url =
-    "https://sheets.googleapis.com/v4/spreadsheets/" +
-    spreadsheetId +
-    "?fields=sheets(properties.sheetId,filterViews,basicFilter)";
-  var response = UrlFetchApp.fetch(url, {
-    headers: { Authorization: "Bearer " + ScriptApp.getOAuthToken() },
-    muteHttpExceptions: true,
-  });
-  var json = JSON.parse(response.getContentText());
-  var sheetData = (json.sheets || []).filter(function (s) {
-    // sheetId 0 (первый лист в файле) Google часто не включает в JSON —
-    // отсутствующее поле тогда нужно считать нулём, а не "не совпало".
-    var sid = s.properties ? s.properties.sheetId || 0 : -1;
-    return sid === sheetId;
-  })[0];
-  Logger.log(
-    "Filter views on this sheet: " +
-      (sheetData && sheetData.filterViews ? sheetData.filterViews.length : 0)
-  );
-  Logger.log(
-    "Basic filter present: " + !!(sheetData && sheetData.basicFilter)
-  );
-}
-
-/**
- * Печатает в лог "сырой" ответ Sheets API для первых 5 строк, чтобы
- * увидеть точную структуру JSON без догадок. Запустите вручную.
- */
-function debugRawSheetsApi() {
-  var sheet = getSheet_();
-  var spreadsheetId = sheet.getParent().getId();
-  var url =
-    "https://sheets.googleapis.com/v4/spreadsheets/" +
-    spreadsheetId +
-    "?ranges=" +
-    encodeURIComponent(sheet.getName() + "!A1:C6") +
-    "&fields=sheets.data.rowMetadata,sheets.basicFilter,sheets.properties.sheetId";
-  var response = UrlFetchApp.fetch(url, {
-    headers: { Authorization: "Bearer " + ScriptApp.getOAuthToken() },
-    muteHttpExceptions: true,
-  });
-  Logger.log("Status: " + response.getResponseCode());
-  Logger.log("Body: " + response.getContentText());
 }
