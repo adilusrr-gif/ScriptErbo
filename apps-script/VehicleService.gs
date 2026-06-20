@@ -13,26 +13,43 @@ function isBlankVehicleRow_(vehicle) {
 }
 
 var VehicleService = {
+  /**
+   * Список техники как его видит пользователь в самой таблице: строки,
+   * скрытые фильтром (Data > Create a filter) или вручную (Hide row),
+   * в список не попадают — даже если данные физически в листе остались
+   * (например, старая проданная техника, которую отфильтровали).
+   */
   getAll: function () {
     var sheet = getSheet_();
-    return getAllRows_(sheet)
-      .map(rowToObject_)
-      .filter(function (vehicle) {
-        return !isBlankVehicleRow_(vehicle);
-      })
-      .sort(function (a, b) {
-        return (a.id || 0) - (b.id || 0);
-      });
+    var rows = getAllRows_(sheet);
+    var result = [];
+    for (var i = 0; i < rows.length; i++) {
+      var sheetRow = i + 2; // +1 заголовок, +1 1-based индекс
+      if (
+        sheet.isRowHiddenByFilter(sheetRow) ||
+        sheet.isRowHiddenByUser(sheetRow)
+      ) {
+        continue;
+      }
+      var vehicle = rowToObject_(rows[i]);
+      if (!isBlankVehicleRow_(vehicle)) result.push(vehicle);
+    }
+    return result.sort(function (a, b) {
+      return (a.id || 0) - (b.id || 0);
+    });
   },
 
+  /** Ищет по id независимо от видимости строки — пригодится, чтобы открыть и снова показать скрытую запись. */
   getById: function (id) {
-    var vehicle = this.getAll().filter(function (v) {
-      return Number(v.id) === Number(id);
-    })[0];
-    if (!vehicle) {
+    var sheet = getSheet_();
+    var rowIndex = findRowIndexById_(sheet, id);
+    if (rowIndex === -1) {
       throw new Error("Техника с id=" + id + " не найдена");
     }
-    return vehicle;
+    var row = sheet
+      .getRange(rowIndex, 1, 1, readableColumnCount_(sheet))
+      .getValues()[0];
+    return rowToObject_(normalizeRowWidth_(row));
   },
 
   create: function (payload) {
