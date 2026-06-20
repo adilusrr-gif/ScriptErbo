@@ -25,7 +25,7 @@ function doPost(e) {
  * не трогаются.
  */
 function setupSheet() {
-  getSheet_();
+  ensureUpdatedAtColumn_(getSheet_());
 }
 
 /**

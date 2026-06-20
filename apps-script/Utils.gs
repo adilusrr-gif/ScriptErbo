@@ -4,6 +4,12 @@
  * (по индексу столбца), формирование ответов REST API.
  */
 
+/**
+ * Возвращает лист с данными. Не пытается ничего записывать — таблица
+ * может быть защищена от изменений (Protected ranges/sheets), и обычные
+ * GET-запросы не должны зависеть от прав на запись. Служебный столбец
+ * "Обновлено" добавляется только явно, функцией setupSheet().
+ */
 function getSheet_() {
   var spreadsheet = getSpreadsheet_();
   var sheet = spreadsheet.getSheetByName(CONFIG.SHEET_NAME);
@@ -13,7 +19,6 @@ function getSheet_() {
         "название вкладки или SPREADSHEET_ID."
     );
   }
-  ensureUpdatedAtColumn_(sheet);
   return sheet;
 }
 
@@ -22,8 +27,31 @@ function ensureUpdatedAtColumn_(sheet) {
   var column = CONFIG.UPDATED_AT_INDEX + 1; // 1-based
   var header = sheet.getRange(1, column).getValue();
   if (!header) {
-    sheet.getRange(1, column).setValue(CONFIG.UPDATED_AT_HEADER);
+    try {
+      sheet.getRange(1, column).setValue(CONFIG.UPDATED_AT_HEADER);
+    } catch (err) {
+      throw new Error(
+        "Не удалось добавить служебный столбец \"Обновлено\" (столбец " +
+          columnToLetter_(column) +
+          "): " +
+          err.message +
+          ". Скорее всего лист или диапазон защищён — снимите защиту " +
+          "(Данные → Защищённые листы и диапазоны) для этого столбца " +
+          "либо добавьте аккаунт, под которым выполняется скрипт, в список " +
+          "редакторов защищённого диапазона."
+      );
+    }
   }
+}
+
+function columnToLetter_(column) {
+  var letter = "";
+  while (column > 0) {
+    var remainder = (column - 1) % 26;
+    letter = String.fromCharCode(65 + remainder) + letter;
+    column = Math.floor((column - 1) / 26);
+  }
+  return letter;
 }
 
 function nowIso_() {
@@ -87,12 +115,18 @@ function objectToRow_(baseRow, updates) {
   return row;
 }
 
+/** Ширина диапазона, который реально можно прочитать без ошибки "Range not found". */
+function readableColumnCount_(sheet) {
+  return Math.min(CONFIG.TOTAL_COLUMNS, sheet.getMaxColumns());
+}
+
 function getAllRows_(sheet) {
   var lastRow = sheet.getLastRow();
   if (lastRow < 2) return [];
-  return sheet
-    .getRange(2, 1, lastRow - 1, CONFIG.TOTAL_COLUMNS)
+  var rows = sheet
+    .getRange(2, 1, lastRow - 1, readableColumnCount_(sheet))
     .getValues();
+  return rows.map(normalizeRowWidth_);
 }
 
 function getIdColumnIndex_() {

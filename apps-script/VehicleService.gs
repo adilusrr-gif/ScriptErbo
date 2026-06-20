@@ -62,7 +62,7 @@ var VehicleService = {
         throw new Error("Техника с id=" + id + " не найдена");
       }
       var existingRow = sheet
-        .getRange(rowIndex, 1, 1, CONFIG.TOTAL_COLUMNS)
+        .getRange(rowIndex, 1, 1, readableColumnCount_(sheet))
         .getValues()[0];
       var updates = Object.assign({}, payload, { updatedAt: nowIso_() });
       delete updates.id; // id неизменяем
