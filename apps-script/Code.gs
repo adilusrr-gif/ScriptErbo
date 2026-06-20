@@ -57,3 +57,51 @@ function debugAuthScopes() {
   var hidden = getHiddenRowSet_(sheet);
   Logger.log("OK, hidden rows count: " + Object.keys(hidden).length);
 }
+
+/**
+ * Временная диагностика: сравнивает два способа определения скрытых
+ * строк на первых 200 строках и проверяет наличие базового фильтра.
+ * Запустите вручную и посмотрите Logs.
+ */
+function debugHiddenRows() {
+  var sheet = getSheet_();
+  var lastRow = Math.min(sheet.getLastRow(), 200);
+  var apiHidden = getHiddenRowSet_(sheet);
+  var sampleHiddenByApps = 0;
+  var sampleHiddenByApi = 0;
+  var mismatches = [];
+  for (var r = 2; r <= lastRow; r++) {
+    var hiddenApps = sheet.isRowHiddenByFilter(r) || sheet.isRowHiddenByUser(r);
+    var hiddenApi = !!apiHidden[r];
+    if (hiddenApps) sampleHiddenByApps++;
+    if (hiddenApi) sampleHiddenByApi++;
+    if (hiddenApps !== hiddenApi && mismatches.length < 5) mismatches.push(r);
+  }
+  Logger.log("Sampled rows 2-" + lastRow);
+  Logger.log("Hidden via Apps Script per-row check: " + sampleHiddenByApps);
+  Logger.log("Hidden via Sheets API batch check: " + sampleHiddenByApi);
+  Logger.log("Example mismatched rows: " + JSON.stringify(mismatches));
+  Logger.log("Has basic filter (sheet.getFilter()): " + (sheet.getFilter() !== null));
+
+  var spreadsheetId = sheet.getParent().getId();
+  var sheetId = sheet.getSheetId();
+  var url =
+    "https://sheets.googleapis.com/v4/spreadsheets/" +
+    spreadsheetId +
+    "?fields=sheets(properties.sheetId,filterViews,basicFilter)";
+  var response = UrlFetchApp.fetch(url, {
+    headers: { Authorization: "Bearer " + ScriptApp.getOAuthToken() },
+    muteHttpExceptions: true,
+  });
+  var json = JSON.parse(response.getContentText());
+  var sheetData = (json.sheets || []).filter(function (s) {
+    return s.properties && s.properties.sheetId === sheetId;
+  })[0];
+  Logger.log(
+    "Filter views on this sheet: " +
+      (sheetData && sheetData.filterViews ? sheetData.filterViews.length : 0)
+  );
+  Logger.log(
+    "Basic filter present: " + !!(sheetData && sheetData.basicFilter)
+  );
+}
