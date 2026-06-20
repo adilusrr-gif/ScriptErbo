@@ -17,6 +17,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { toText } from "@/lib/utils"
 import type { Vehicle } from "@/types/vehicle"
 
 export default function DeliveryPage() {
@@ -33,6 +34,7 @@ export default function DeliveryPage() {
       if (!vehicle.delivery && !vehicle.carrier && !vehicle.route) return false
       if (!query) return true
       return [vehicle.delivery, vehicle.carrier, vehicle.route]
+        .map(toText)
         .join(" ")
         .toLowerCase()
         .includes(query)

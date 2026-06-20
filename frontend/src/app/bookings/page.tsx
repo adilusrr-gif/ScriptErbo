@@ -18,6 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { toText } from "@/lib/utils"
 import type { BookingFormValues } from "@/lib/validations/booking-schema"
 import type { Vehicle } from "@/types/vehicle"
 
@@ -32,9 +33,10 @@ export default function BookingsPage() {
     if (!data) return []
     const query = search.trim().toLowerCase()
     return data.filter((vehicle) => {
-      if (!vehicle.status.trim().toLowerCase().includes("брон")) return false
+      if (!toText(vehicle.status).trim().toLowerCase().includes("брон")) return false
       if (!query) return true
       return [vehicle.vehicleType, vehicle.model, vehicle.buyerCompany, vehicle.contract]
+        .map(toText)
         .join(" ")
         .toLowerCase()
         .includes(query)

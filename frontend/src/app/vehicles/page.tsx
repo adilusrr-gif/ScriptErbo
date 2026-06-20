@@ -23,10 +23,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { toText } from "@/lib/utils"
 import type { Vehicle } from "@/types/vehicle"
 
-function includesNormalized(value: string, needle: string) {
-  return value.trim().toLowerCase().includes(needle.trim().toLowerCase())
+function includesNormalized(value: unknown, needle: string) {
+  return toText(value).trim().toLowerCase().includes(needle.trim().toLowerCase())
 }
 
 function matchesFilters(vehicle: Vehicle, filters: VehicleListFilters) {
@@ -42,6 +43,7 @@ function matchesFilters(vehicle: Vehicle, filters: VehicleListFilters) {
       vehicle.company,
       vehicle.buyerCompany,
     ]
+      .map(toText)
       .join(" ")
       .toLowerCase()
     if (!haystack.includes(search)) return false

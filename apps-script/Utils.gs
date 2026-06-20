@@ -66,7 +66,9 @@ function coerceValue_(key, value) {
   }
   if (value === null || value === undefined) return "";
   if (value instanceof Date) return value.toISOString();
-  return value;
+  // Google Sheets хранит ячейки вроде VIN "0425" как числа, если содержимое
+  // выглядит числом — но в JSON-контракте все немисловые поля строки.
+  return String(value);
 }
 
 function blankRow_() {
@@ -91,7 +93,7 @@ function rowToObject_(row) {
   CONFIG.FALLBACK_MERGES.forEach(function (merge) {
     if (!obj[merge.key]) {
       var fallback = row[merge.fallbackIndex];
-      if (fallback) obj[merge.key] = fallback;
+      if (fallback) obj[merge.key] = String(fallback);
     }
   });
   return obj;
