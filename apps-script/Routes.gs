@@ -36,6 +36,9 @@ function handleGet_(e) {
       case "filter":
         return successResponse_(VehicleService.filter(params));
 
+      case "export-all":
+        return successResponse_(VehicleService.exportAll());
+
       default:
         throw new Error("Неизвестный route: " + route);
     }

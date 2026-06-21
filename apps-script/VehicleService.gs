@@ -35,6 +35,26 @@ var VehicleService = {
     });
   },
 
+  /**
+   * Временный метод для одноразовой миграции в внешнюю БД: отдаёт
+   * абсолютно все строки (включая скрытые фильтром/вручную и
+   * технически пустые), с флагом archived вместо отбрасывания.
+   */
+  exportAll: function () {
+    var sheet = getSheet_();
+    var rows = getAllRows_(sheet);
+    var hidden = getHiddenRowSet_(sheet);
+    var result = [];
+    for (var i = 0; i < rows.length; i++) {
+      var sheetRow = i + 2;
+      var vehicle = rowToObject_(rows[i]);
+      if (isBlankVehicleRow_(vehicle)) continue;
+      vehicle.archived = !!hidden[sheetRow];
+      result.push(vehicle);
+    }
+    return result;
+  },
+
   /** Ищет по id независимо от видимости строки — пригодится, чтобы открыть и снова показать скрытую запись. */
   getById: function (id) {
     var sheet = getSheet_();
