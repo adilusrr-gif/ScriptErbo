@@ -1,7 +1,5 @@
 import type { ApiResponse } from "@/types/api"
 
-const BASE_URL = process.env.NEXT_PUBLIC_APPS_SCRIPT_URL ?? ""
-
 class ApiClientError extends Error {
   constructor(message: string) {
     super(message)
@@ -9,25 +7,17 @@ class ApiClientError extends Error {
   }
 }
 
-function assertBaseUrl() {
-  if (!BASE_URL) {
-    throw new ApiClientError(
-      "NEXT_PUBLIC_APPS_SCRIPT_URL не задан. Укажите URL Apps Script Web App в .env.local"
-    )
-  }
-}
-
 function buildUrl(route: string, params?: Record<string, string | number | undefined>) {
-  const url = new URL(BASE_URL)
-  url.searchParams.set("route", route)
+  const search = new URLSearchParams()
   if (params) {
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined && value !== null && value !== "") {
-        url.searchParams.set(key, String(value))
+        search.set(key, String(value))
       }
     }
   }
-  return url.toString()
+  const query = search.toString()
+  return `/api/${route}${query ? `?${query}` : ""}`
 }
 
 async function unwrap<T>(res: Response): Promise<T> {
@@ -45,21 +35,14 @@ async function apiGet<T>(
   route: string,
   params?: Record<string, string | number | undefined>
 ): Promise<T> {
-  assertBaseUrl()
   const res = await fetch(buildUrl(route, params), { method: "GET" })
   return unwrap<T>(res)
 }
 
-/**
- * POST body is sent with Content-Type text/plain to keep the request a CORS
- * "simple request" — Apps Script Web Apps cannot answer OPTIONS preflights,
- * so application/json would otherwise break cross-origin calls.
- */
 async function apiPost<T>(route: string, payload: unknown): Promise<T> {
-  assertBaseUrl()
   const res = await fetch(buildUrl(route), {
     method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   })
   return unwrap<T>(res)

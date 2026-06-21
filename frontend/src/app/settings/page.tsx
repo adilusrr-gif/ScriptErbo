@@ -11,7 +11,6 @@ import { vehicleApi } from "@/lib/vehicle-api"
 import { ApiClientError } from "@/lib/api-client"
 
 export default function SettingsPage() {
-  const apiUrl = process.env.NEXT_PUBLIC_APPS_SCRIPT_URL ?? ""
   const [checking, setChecking] = useState(false)
   const [status, setStatus] = useState<"idle" | "ok" | "fail">("idle")
 
@@ -20,7 +19,7 @@ export default function SettingsPage() {
     try {
       await vehicleApi.dashboard()
       setStatus("ok")
-      toast.success("Соединение с Apps Script установлено")
+      toast.success("Соединение с базой данных установлено")
     } catch (error) {
       setStatus("fail")
       toast.error(error instanceof ApiClientError ? error.message : "Не удалось подключиться")
@@ -33,22 +32,15 @@ export default function SettingsPage() {
     <div className="max-w-2xl space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>Подключение к Google Apps Script</CardTitle>
+          <CardTitle>Подключение к базе данных</CardTitle>
           <CardDescription>
-            Приложение хранит и читает все данные через Apps Script Web App,
-            который работает поверх Google Sheets.
+            Приложение хранит и читает все данные через собственный API
+            (Next.js Route Handlers) поверх Postgres.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-1">
-            <p className="text-sm text-muted-foreground">NEXT_PUBLIC_APPS_SCRIPT_URL</p>
-            <p className="break-all rounded-md bg-muted px-3 py-2 font-mono text-sm">
-              {apiUrl || "не задан — добавьте переменную в .env.local"}
-            </p>
-          </div>
-
           <div className="flex items-center gap-3">
-            <Button onClick={testConnection} disabled={checking || !apiUrl}>
+            <Button onClick={testConnection} disabled={checking}>
               {checking ? "Проверка..." : "Проверить соединение"}
             </Button>
             {status === "ok" && (
@@ -72,7 +64,7 @@ export default function SettingsPage() {
         <CardContent className="space-y-1 text-sm text-muted-foreground">
           <p>ScriptErbo — учёт остатков техники.</p>
           <p>Frontend: Next.js 15 + React 19 + TypeScript + TailwindCSS.</p>
-          <p>Backend: Google Apps Script (REST API) + Google Sheets как база данных.</p>
+          <p>Backend: Next.js Route Handlers + Drizzle ORM + Postgres (Neon).</p>
         </CardContent>
       </Card>
     </div>
