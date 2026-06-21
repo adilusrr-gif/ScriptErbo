@@ -18,6 +18,7 @@ import type { Vehicle } from "@/types/vehicle"
 interface ColumnActions {
   onUpdateField: (id: number, field: keyof Vehicle, value: string) => void
   onDelete: (id: number) => void
+  isOwner: boolean
 }
 
 interface SortableColumn {
@@ -49,6 +50,7 @@ function sortableHeader(label: string) {
 export function buildVehicleColumns({
   onUpdateField,
   onDelete,
+  isOwner,
 }: ColumnActions): ColumnDef<Vehicle>[] {
   return [
     {
@@ -104,13 +106,16 @@ export function buildVehicleColumns({
     {
       accessorKey: "manager",
       header: "Менеджер",
-      cell: ({ row }) => (
-        <QuickEditText
-          value={row.original.manager}
-          placeholder="Не назначен"
-          onSave={(value) => onUpdateField(row.original.id, "manager", value)}
-        />
-      ),
+      cell: ({ row }) =>
+        isOwner ? (
+          <QuickEditText
+            value={row.original.manager}
+            placeholder="Не назначен"
+            onSave={(value) => onUpdateField(row.original.id, "manager", value)}
+          />
+        ) : (
+          <span>{row.original.manager || "Не назначен"}</span>
+        ),
     },
     {
       accessorKey: "paymentStatus",
@@ -140,13 +145,15 @@ export function buildVehicleColumns({
               <Eye className="mr-2 size-4" />
               Открыть карточку
             </DropdownMenuItem>
-            <DropdownMenuItem
-              variant="destructive"
-              onClick={() => onDelete(row.original.id)}
-            >
-              <Trash2 className="mr-2 size-4" />
-              Удалить
-            </DropdownMenuItem>
+            {isOwner && (
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={() => onDelete(row.original.id)}
+              >
+                <Trash2 className="mr-2 size-4" />
+                Удалить
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       ),

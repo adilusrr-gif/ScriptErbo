@@ -24,6 +24,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { toText } from "@/lib/utils"
+import { useCurrentUser } from "@/hooks/use-current-user"
 import type { Vehicle } from "@/types/vehicle"
 
 function includesNormalized(value: unknown, needle: string) {
@@ -57,6 +58,8 @@ function matchesFilters(vehicle: Vehicle, filters: VehicleListFilters) {
 
 export default function VehiclesPage() {
   const { data, isLoading, isError, error } = useVehicles()
+  const { data: currentUser } = useCurrentUser()
+  const isOwner = currentUser?.role === "owner"
   const updateVehicle = useUpdateVehicle()
   const deleteVehicle = useDeleteVehicle()
 
@@ -76,10 +79,12 @@ export default function VehiclesPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <VehicleFilters filters={filters} onChange={setFilters} />
-        <Button render={<Link href="/vehicles/new" />} nativeButton={false}>
-          <PlusCircle className="mr-2 size-4" />
-          Добавить технику
-        </Button>
+        {isOwner && (
+          <Button render={<Link href="/vehicles/new" />} nativeButton={false}>
+            <PlusCircle className="mr-2 size-4" />
+            Добавить технику
+          </Button>
+        )}
       </div>
 
       {isError ? (
@@ -99,7 +104,7 @@ export default function VehiclesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Удалить технику?</AlertDialogTitle>
             <AlertDialogDescription>
-              Действие необратимо. Запись будет удалена из Google Sheets.
+              Действие необратимо. Запись будет удалена из базы данных.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

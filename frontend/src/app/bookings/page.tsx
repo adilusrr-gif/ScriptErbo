@@ -87,7 +87,7 @@ export default function BookingsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Удалить технику?</AlertDialogTitle>
             <AlertDialogDescription>
-              Действие необратимо. Запись будет удалена из Google Sheets.
+              Действие необратимо. Запись будет удалена из базы данных.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

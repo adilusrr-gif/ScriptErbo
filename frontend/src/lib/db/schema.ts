@@ -52,3 +52,17 @@ export const vehicles = pgTable("vehicles", {
 
 export type VehicleRow = typeof vehicles.$inferSelect
 export type NewVehicleRow = typeof vehicles.$inferInsert
+
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  email: text("email").notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  /** Должно совпадать с тем, как имя менеджера записано в vehicles.manager
+   *  — по нему ограничивается видимость записей для роли manager. */
+  name: text("name").notNull(),
+  role: text("role", { enum: ["owner", "manager"] }).notNull().default("manager"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+})
+
+export type UserRow = typeof users.$inferSelect
+export type NewUserRow = typeof users.$inferInsert

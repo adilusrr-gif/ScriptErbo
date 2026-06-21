@@ -48,9 +48,15 @@ async function apiPost<T>(route: string, payload: unknown): Promise<T> {
   return unwrap<T>(res)
 }
 
+async function apiDelete<T>(route: string): Promise<T> {
+  const res = await fetch(buildUrl(route), { method: "DELETE" })
+  return unwrap<T>(res)
+}
+
 export const apiClient = {
   get: apiGet,
   post: apiPost,
+  delete: apiDelete,
 }
 
 export { ApiClientError }

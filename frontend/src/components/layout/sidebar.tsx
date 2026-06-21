@@ -6,9 +6,14 @@ import { Truck } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { navItems } from "@/lib/nav-items"
+import { useCurrentUser } from "@/hooks/use-current-user"
+import { UserMenu } from "@/components/layout/user-menu"
 
 export function Sidebar() {
   const pathname = usePathname()
+  const { data: user } = useCurrentUser()
+
+  const visibleItems = navItems.filter((item) => !item.ownerOnly || user?.role === "owner")
 
   return (
     <aside className="hidden w-64 shrink-0 border-r bg-sidebar md:flex md:flex-col">
@@ -17,7 +22,7 @@ export function Sidebar() {
         <span className="font-semibold">ScriptErbo</span>
       </div>
       <nav className="flex-1 space-y-1 p-3">
-        {navItems.map((item) => {
+        {visibleItems.map((item) => {
           const isActive =
             item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)
           const Icon = item.icon
@@ -38,6 +43,7 @@ export function Sidebar() {
           )
         })}
       </nav>
+      <UserMenu />
     </aside>
   )
 }

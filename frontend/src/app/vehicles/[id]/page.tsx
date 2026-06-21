@@ -5,6 +5,7 @@ import { useState } from "react"
 import { Trash2 } from "lucide-react"
 
 import { useDeleteVehicle, useUpdateVehicle, useVehicle } from "@/hooks/use-vehicles"
+import { useCurrentUser } from "@/hooks/use-current-user"
 import { VehicleForm } from "@/components/vehicles/vehicle-form"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -27,6 +28,8 @@ export default function VehicleDetailPage() {
   const router = useRouter()
 
   const { data: vehicle, isLoading, isError, error } = useVehicle(id)
+  const { data: currentUser } = useCurrentUser()
+  const isOwner = currentUser?.role === "owner"
   const updateVehicle = useUpdateVehicle()
   const deleteVehicle = useDeleteVehicle()
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -58,24 +61,26 @@ export default function VehicleDetailPage() {
           ID {vehicle.id} · обновлено{" "}
           {vehicle.updatedAt ? new Date(vehicle.updatedAt).toLocaleString("ru-RU") : "—"}
         </p>
-        <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-          <AlertDialogTrigger render={<Button variant="destructive" size="sm" />}>
-            <Trash2 className="mr-2 size-4" />
-            Удалить
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Удалить технику?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Действие необратимо. Запись будет удалена из Google Sheets.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Отмена</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDelete}>Удалить</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        {isOwner && (
+          <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+            <AlertDialogTrigger render={<Button variant="destructive" size="sm" />}>
+              <Trash2 className="mr-2 size-4" />
+              Удалить
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Удалить технику?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Действие необратимо. Запись будет удалена из базы данных.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Отмена</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete}>Удалить</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
       </div>
 
       <VehicleForm

@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { buildVehicleColumns } from "@/components/vehicles/columns"
+import { useCurrentUser } from "@/hooks/use-current-user"
 import type { Vehicle } from "@/types/vehicle"
 
 interface VehicleTableProps {
@@ -30,8 +31,9 @@ interface VehicleTableProps {
 
 export function VehicleTable({ vehicles, onUpdateField, onDelete }: VehicleTableProps) {
   const [sorting, setSorting] = useState<SortingState>([])
+  const { data: currentUser } = useCurrentUser()
 
-  const columns = buildVehicleColumns({ onUpdateField, onDelete })
+  const columns = buildVehicleColumns({ onUpdateField, onDelete, isOwner: currentUser?.role === "owner" })
 
   const table = useReactTable({
     data: vehicles,

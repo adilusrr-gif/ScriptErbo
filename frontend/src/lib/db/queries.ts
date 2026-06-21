@@ -1,13 +1,20 @@
-import { and, desc, eq, ilike, isNotNull, or } from "drizzle-orm"
+import { and, desc, eq, ilike, isNotNull, notIlike, or, sql, type SQL } from "drizzle-orm"
 
 import { db } from "@/lib/db"
 import { vehicles, type VehicleRow } from "@/lib/db/schema"
+import type { Role } from "@/lib/auth/session"
 import type {
   DashboardStats,
   Vehicle,
   VehicleFilterParams,
   VehicleInput,
 } from "@/types/vehicle"
+
+export interface AuthContext {
+  role: Role
+  /** Имя менеджера — должно совпадать с vehicles.manager для своих записей. */
+  name: string
+}
 
 function toVehicle(row: VehicleRow): Vehicle {
   return {
@@ -59,24 +66,42 @@ function toInsertValues(input: Partial<VehicleInput>) {
   return values
 }
 
+/**
+ * Видимость для роли manager: свои записи (manager = их имя) ИЛИ свободная
+ * техника, ещё не забронированная никем (manager пуст и статус не "брон") —
+ * чтобы можно было выбрать технику для новой брони, не видя чужие брони.
+ * Для owner ограничений нет (возвращает null).
+ */
+function visibilityCondition(ctx: AuthContext): SQL | undefined {
+  if (ctx.role === "owner") return undefined
+  return or(
+    // trim с двух сторон — в данных встречаются лишние пробелы вокруг имени
+    sql`lower(trim(${vehicles.manager})) = lower(${ctx.name.trim()})`,
+    and(eq(sql<string>`trim(${vehicles.manager})`, ""), notIlike(vehicles.status, "%брон%"))
+  )
+}
+
 export const VehicleQueries = {
-  async getAll(): Promise<Vehicle[]> {
+  async getAll(ctx: AuthContext): Promise<Vehicle[]> {
+    const scope = visibilityCondition(ctx)
     const rows = await db
       .select()
       .from(vehicles)
-      .where(eq(vehicles.archived, false))
+      .where(scope ? and(eq(vehicles.archived, false), scope) : eq(vehicles.archived, false))
       .orderBy(vehicles.id)
     return rows.map(toVehicle)
   },
 
-  async getById(id: number): Promise<Vehicle> {
-    const [row] = await db
-      .select()
-      .from(vehicles)
-      .where(eq(vehicles.id, id))
-      .limit(1)
-    if (!row) throw new Error(`Техника с id=${id} не найдена`)
-    return toVehicle(row)
+  async getById(id: number, ctx: AuthContext): Promise<Vehicle> {
+    if (ctx.role === "owner") {
+      const [row] = await db.select().from(vehicles).where(eq(vehicles.id, id)).limit(1)
+      if (!row) throw new Error(`Техника с id=${id} не найдена`)
+      return toVehicle(row)
+    }
+    const visible = await this.getAll(ctx)
+    const vehicle = visible.find((v) => v.id === id)
+    if (!vehicle) throw new Error(`Техника с id=${id} не найдена`)
+    return vehicle
   },
 
   async create(input: VehicleInput): Promise<Vehicle> {
@@ -87,9 +112,19 @@ export const VehicleQueries = {
     return toVehicle(row)
   },
 
-  async update(id: number, input: Partial<VehicleInput>): Promise<Vehicle> {
+  async update(id: number, input: Partial<VehicleInput>, ctx: AuthContext): Promise<Vehicle> {
+    // Manager должен сначала видеть запись (своя или свободная), иначе — не найдена.
+    await this.getById(id, ctx)
+
     const values = toInsertValues(input)
     delete values.id
+
+    if (ctx.role === "manager") {
+      // Менеджер не может присвоить технику другому менеджеру или снять
+      // с себя — поле manager всегда принудительно его собственное имя.
+      values.manager = ctx.name
+    }
+
     const [row] = await db
       .update(vehicles)
       .set({ ...values, updatedAt: new Date() })
@@ -108,40 +143,42 @@ export const VehicleQueries = {
     return { id: row.id }
   },
 
-  async search(query: string): Promise<Vehicle[]> {
+  async search(query: string, ctx: AuthContext): Promise<Vehicle[]> {
     const needle = query.trim()
-    if (!needle) return this.getAll()
+    if (!needle) return this.getAll(ctx)
     const pattern = `%${needle}%`
+    const scope = visibilityCondition(ctx)
+    const textMatch = or(
+      ilike(vehicles.vehicleType, pattern),
+      ilike(vehicles.model, pattern),
+      ilike(vehicles.vin, pattern),
+      ilike(vehicles.fullVin, pattern),
+      ilike(vehicles.company, pattern),
+      ilike(vehicles.manager, pattern),
+      ilike(vehicles.managerSecondary, pattern),
+      ilike(vehicles.buyerCompany, pattern),
+      ilike(vehicles.contract, pattern),
+      ilike(vehicles.dkpContract, pattern),
+      ilike(vehicles.note, pattern),
+      ilike(vehicles.route, pattern),
+      ilike(vehicles.carrier, pattern),
+      ilike(vehicles.location, pattern)
+    )
     const rows = await db
       .select()
       .from(vehicles)
       .where(
-        and(
-          eq(vehicles.archived, false),
-          or(
-            ilike(vehicles.vehicleType, pattern),
-            ilike(vehicles.model, pattern),
-            ilike(vehicles.vin, pattern),
-            ilike(vehicles.fullVin, pattern),
-            ilike(vehicles.company, pattern),
-            ilike(vehicles.manager, pattern),
-            ilike(vehicles.managerSecondary, pattern),
-            ilike(vehicles.buyerCompany, pattern),
-            ilike(vehicles.contract, pattern),
-            ilike(vehicles.dkpContract, pattern),
-            ilike(vehicles.note, pattern),
-            ilike(vehicles.route, pattern),
-            ilike(vehicles.carrier, pattern),
-            ilike(vehicles.location, pattern)
-          )
-        )
+        scope
+          ? and(eq(vehicles.archived, false), scope, textMatch)
+          : and(eq(vehicles.archived, false), textMatch)
       )
       .orderBy(vehicles.id)
     return rows.map(toVehicle)
   },
 
-  async filter(params: VehicleFilterParams): Promise<Vehicle[]> {
-    const conditions = [eq(vehicles.archived, false)]
+  async filter(params: VehicleFilterParams, ctx: AuthContext): Promise<Vehicle[]> {
+    const scope = visibilityCondition(ctx)
+    const conditions = [eq(vehicles.archived, false), ...(scope ? [scope] : [])]
     const fieldMap = {
       vehicleType: vehicles.vehicleType,
       status: vehicles.status,
@@ -164,8 +201,8 @@ export const VehicleQueries = {
     return rows.map(toVehicle)
   },
 
-  async dashboard(): Promise<DashboardStats> {
-    const all = await this.getAll()
+  async dashboard(ctx: AuthContext): Promise<DashboardStats> {
+    const all = await this.getAll(ctx)
 
     let available = 0
     let booked = 0
@@ -187,10 +224,15 @@ export const VehicleQueries = {
       }
     }
 
+    const scope = visibilityCondition(ctx)
     const recentChanges = await db
       .select()
       .from(vehicles)
-      .where(and(eq(vehicles.archived, false), isNotNull(vehicles.updatedAt)))
+      .where(
+        scope
+          ? and(eq(vehicles.archived, false), isNotNull(vehicles.updatedAt), scope)
+          : and(eq(vehicles.archived, false), isNotNull(vehicles.updatedAt))
+      )
       .orderBy(desc(vehicles.updatedAt))
       .limit(10)
 
