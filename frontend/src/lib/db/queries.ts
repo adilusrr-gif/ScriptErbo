@@ -244,7 +244,7 @@ export const VehicleQueries = {
     return rows.map(toVehicle)
   },
 
-  async dashboard(ctx: AuthContext): Promise<DashboardStats> {
+  async dashboard(ctx: AuthContext, activityHours = 24): Promise<DashboardStats> {
     const all = await this.getAll(ctx)
 
     let available = 0
@@ -287,7 +287,7 @@ export const VehicleQueries = {
     }
 
     // Чужая активность — закрытая информация для manager, видна только owner.
-    const managerActivity = ctx.role === "owner" ? await ActivityQueries.last24h() : []
+    const managerActivity = ctx.role === "owner" ? await ActivityQueries.recent(activityHours) : []
 
     return {
       total: all.length,

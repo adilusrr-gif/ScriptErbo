@@ -1,7 +1,8 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { Suspense, useMemo, useState } from "react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { PlusCircle } from "lucide-react"
 
 import { useDeleteVehicle, useUpdateVehicle, useVehicles } from "@/hooks/use-vehicles"
@@ -56,14 +57,27 @@ function matchesFilters(vehicle: Vehicle, filters: VehicleListFilters) {
   return true
 }
 
-export default function VehiclesPage() {
+function filtersFromSearchParams(searchParams: URLSearchParams): VehicleListFilters {
+  return {
+    search: searchParams.get("search") ?? defaultVehicleListFilters.search,
+    status: searchParams.get("status") ?? defaultVehicleListFilters.status,
+    vehicleType: searchParams.get("vehicleType") ?? defaultVehicleListFilters.vehicleType,
+    paymentStatus: searchParams.get("paymentStatus") ?? defaultVehicleListFilters.paymentStatus,
+    delivery: searchParams.get("delivery") ?? defaultVehicleListFilters.delivery,
+  }
+}
+
+function VehiclesPageContent() {
   const { data, isLoading, isError, error } = useVehicles()
   const { data: currentUser } = useCurrentUser()
   const isOwner = currentUser?.role === "owner"
   const updateVehicle = useUpdateVehicle()
   const deleteVehicle = useDeleteVehicle()
+  const searchParams = useSearchParams()
 
-  const [filters, setFilters] = useState<VehicleListFilters>(defaultVehicleListFilters)
+  const [filters, setFilters] = useState<VehicleListFilters>(() =>
+    filtersFromSearchParams(searchParams)
+  )
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null)
 
   const filtered = useMemo(() => {
@@ -121,5 +135,13 @@ export default function VehiclesPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  )
+}
+
+export default function VehiclesPage() {
+  return (
+    <Suspense>
+      <VehiclesPageContent />
+    </Suspense>
   )
 }

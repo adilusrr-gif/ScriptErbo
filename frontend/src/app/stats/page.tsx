@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
+import { useRouter } from "next/navigation"
 
 import { useVehicles } from "@/hooks/use-vehicles"
 import { BreakdownCard } from "@/components/stats/breakdown-card"
@@ -17,6 +18,7 @@ function countBy(vehicles: Vehicle[], key: keyof Vehicle) {
 }
 
 export default function StatsPage() {
+  const router = useRouter()
   const { data, isLoading, isError, error } = useVehicles()
 
   const breakdowns = useMemo(() => {
@@ -45,14 +47,43 @@ export default function StatsPage() {
     )
   }
 
+  function goTo(param: string, label: string) {
+    if (label === "Не указано") return
+    router.push(`/vehicles?${param}=${encodeURIComponent(label)}`)
+  }
+
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      <BreakdownCard title="По статусу" counts={breakdowns.status} />
-      <BreakdownCard title="По виду техники" counts={breakdowns.vehicleType} />
-      <BreakdownCard title="По менеджеру" counts={breakdowns.manager} />
-      <BreakdownCard title="По компании" counts={breakdowns.company} />
-      <BreakdownCard title="По статусу оплаты" counts={breakdowns.paymentStatus} />
-      <BreakdownCard title="По доставке" counts={breakdowns.delivery} />
+      <BreakdownCard
+        title="По статусу"
+        counts={breakdowns.status}
+        onSelect={(label) => goTo("status", label)}
+      />
+      <BreakdownCard
+        title="По виду техники"
+        counts={breakdowns.vehicleType}
+        onSelect={(label) => goTo("vehicleType", label)}
+      />
+      <BreakdownCard
+        title="По менеджеру"
+        counts={breakdowns.manager}
+        onSelect={(label) => goTo("search", label)}
+      />
+      <BreakdownCard
+        title="По компании"
+        counts={breakdowns.company}
+        onSelect={(label) => goTo("search", label)}
+      />
+      <BreakdownCard
+        title="По статусу оплаты"
+        counts={breakdowns.paymentStatus}
+        onSelect={(label) => goTo("paymentStatus", label)}
+      />
+      <BreakdownCard
+        title="По доставке"
+        counts={breakdowns.delivery}
+        onSelect={(label) => goTo("delivery", label)}
+      />
     </div>
   )
 }

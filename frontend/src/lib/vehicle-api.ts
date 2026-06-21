@@ -18,5 +18,5 @@ export const vehicleApi = {
 
   delete: (id: number) => apiClient.post<{ id: number }>("vehicle/delete", { id }),
 
-  dashboard: () => apiClient.get<DashboardStats>("dashboard"),
+  dashboard: (hours?: number) => apiClient.get<DashboardStats>("dashboard", { hours }),
 }

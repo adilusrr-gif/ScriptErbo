@@ -33,8 +33,8 @@ export const ActivityQueries = {
     })
   },
 
-  async last24h(): Promise<ManagerActivity[]> {
-    const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
+  async recent(hours: number): Promise<ManagerActivity[]> {
+    const since = new Date(Date.now() - hours * 60 * 60 * 1000)
     const rows = await db
       .select({
         name: activityLog.userName,
