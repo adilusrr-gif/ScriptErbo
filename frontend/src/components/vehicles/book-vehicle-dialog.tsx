@@ -181,6 +181,27 @@ export function BookVehicleDialog({ vehicles, onBook, isSubmitting }: BookVehicl
                   />
                   <FormField
                     control={form.control}
+                    name="bookingDays"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Срок брони (дней)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={365}
+                            value={field.value ?? ""}
+                            onChange={(e) =>
+                              field.onChange(e.target.value === "" ? null : Number(e.target.value))
+                            }
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
                     name="buyerCompany"
                     render={({ field }) => (
                       <FormItem>

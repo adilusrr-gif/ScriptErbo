@@ -35,10 +35,20 @@ export interface Vehicle {
   carrier: string
   route: string
   yearSecondary: number | null
+  /** Срок брони в днях, указанный при бронировании (см. bookingExpiresAt). */
+  bookingDays: number | null
+  /** Когда бронь истекает и автоматически снимается (см. /api/cron/expire-bookings). */
+  bookingExpiresAt: string
   updatedAt: string
 }
 
-export type VehicleInput = Omit<Vehicle, "id" | "updatedAt">
+export type VehicleInput = Omit<Vehicle, "id" | "updatedAt" | "bookingExpiresAt">
+
+export interface ManagerActivity {
+  name: string
+  role: string
+  count: number
+}
 
 export interface DashboardStats {
   total: number
@@ -48,6 +58,8 @@ export interface DashboardStats {
   repair: number
   awaitingPayment: number
   recentChanges: Vehicle[]
+  bookingsByType: Record<string, number>
+  managerActivity: ManagerActivity[]
 }
 
 export interface VehicleFilterParams {

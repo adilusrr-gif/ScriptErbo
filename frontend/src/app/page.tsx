@@ -7,6 +7,7 @@ import { useDashboard } from "@/hooks/use-dashboard"
 import { StatCard } from "@/components/dashboard/stat-card"
 import { RecentChanges } from "@/components/dashboard/recent-changes"
 import { BackgroundPaths } from "@/components/ui/background-paths"
+import { BreakdownCard } from "@/components/stats/breakdown-card"
 import { Skeleton } from "@/components/ui/skeleton"
 
 export default function DashboardPage() {
@@ -47,6 +48,20 @@ export default function DashboardPage() {
         <StatCard title="Продано" value={data.sold} icon={PackageCheck} accent="coral" />
         <StatCard title="Ремонт" value={data.repair} icon={Wrench} accent="amber" />
         <StatCard title="Ожидает оплаты" value={data.awaitingPayment} icon={Wallet} accent="tiffany" />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <BreakdownCard title="Бронь по видам техники" counts={data.bookingsByType} />
+        {data.managerActivity.length > 0 && (
+          <BreakdownCard
+            title="Активность за 24 часа"
+            counts={Object.fromEntries(
+              data.managerActivity.map((a) => [
+                a.role === "owner" ? `${a.name} (владелец)` : a.name,
+                a.count,
+              ])
+            )}
+          />
+        )}
       </div>
       <RecentChanges vehicles={data.recentChanges} />
     </div>

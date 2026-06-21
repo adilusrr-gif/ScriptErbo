@@ -2,12 +2,18 @@ import { NextResponse, type NextRequest } from "next/server"
 
 import { SESSION_COOKIE, verifySessionToken } from "@/lib/auth/session"
 
+// /api/cron/* защищён собственным секретом (CRON_SECRET), не сессией —
+// у вызывающего (Vercel Cron) нет куки сессии.
 const PUBLIC_PATHS = ["/login", "/api/auth/login"]
+const PUBLIC_PREFIXES = ["/api/cron/"]
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  if (PUBLIC_PATHS.some((path) => pathname === path)) {
+  if (
+    PUBLIC_PATHS.some((path) => pathname === path) ||
+    PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+  ) {
     return NextResponse.next()
   }
 

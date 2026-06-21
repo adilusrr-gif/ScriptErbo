@@ -189,6 +189,7 @@ export function VehicleForm({
               control={form.control}
               fields={[
                 { name: "bookingDate", label: "Дата брони", type: "date" },
+                { name: "bookingDays", label: "Срок брони (дней)", type: "number" },
                 { name: "buyerCompany", label: "Компания покупателя" },
                 { name: "contract", label: "Договор" },
                 { name: "dkpContract", label: "ДКП и № договора" },

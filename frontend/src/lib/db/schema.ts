@@ -47,6 +47,10 @@ export const vehicles = pgTable("vehicles", {
   /** Заменяет концепцию "скрыт фильтром/вручную" из Google Sheets — такие
    *  записи не попадают в обычные списки/статистику, но не удаляются. */
   archived: boolean("archived").notNull().default(false),
+  /** Срок брони в днях, указанный при бронировании, и посчитанный сервером
+   *  момент истечения — после него /api/cron/expire-bookings сбрасывает бронь. */
+  bookingDays: integer("booking_days"),
+  bookingExpiresAt: timestamp("booking_expires_at", { withTimezone: true }),
   updatedAt: timestamp("updated_at", { withTimezone: true }),
 })
 
@@ -66,3 +70,18 @@ export const users = pgTable("users", {
 
 export type UserRow = typeof users.$inferSelect
 export type NewUserRow = typeof users.$inferInsert
+
+/** Журнал действий: кто/когда/что изменил — основа для "активность за 24ч" на Dashboard. */
+export const activityLog = pgTable("activity_log", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id"),
+  userName: text("user_name").notNull(),
+  userRole: text("user_role").notNull(),
+  vehicleId: integer("vehicle_id"),
+  action: text("action", { enum: ["create", "update", "delete"] }).notNull(),
+  summary: text("summary").notNull().default(""),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+})
+
+export type ActivityLogRow = typeof activityLog.$inferSelect
+export type NewActivityLogRow = typeof activityLog.$inferInsert

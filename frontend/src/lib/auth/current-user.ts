@@ -1,6 +1,7 @@
 import { cookies } from "next/headers"
 
 import { SESSION_COOKIE, verifySessionToken, type SessionPayload } from "./session"
+import type { AuthContext } from "@/lib/db/queries"
 
 export async function getCurrentUser(): Promise<SessionPayload | null> {
   const cookieStore = await cookies()
@@ -19,4 +20,13 @@ export async function requireOwner(): Promise<SessionPayload> {
   const user = await requireUser()
   if (user.role !== "owner") throw new Error("Доступно только владельцу")
   return user
+}
+
+/** SessionPayload -> AuthContext для VehicleQueries/ActivityQueries. */
+export function toAuthContext(session: SessionPayload): AuthContext {
+  return { role: session.role, name: session.name, userId: Number(session.sub) }
+}
+
+export async function requireAuthContext(): Promise<AuthContext> {
+  return toAuthContext(await requireUser())
 }

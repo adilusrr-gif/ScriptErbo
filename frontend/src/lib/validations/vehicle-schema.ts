@@ -43,6 +43,7 @@ export const vehicleFormSchema = z.object({
   carrier: z.string(),
   route: z.string(),
   yearSecondary: yearField,
+  bookingDays: z.number().int().min(1).max(365).nullable(),
 })
 
 export type VehicleFormValues = z.infer<typeof vehicleFormSchema>
@@ -83,4 +84,5 @@ export const vehicleFormDefaults: VehicleFormValues = {
   carrier: "",
   route: "",
   yearSecondary: null,
+  bookingDays: null,
 }

@@ -1,11 +1,11 @@
 import { VehicleQueries } from "@/lib/db/queries"
 import { failure, success } from "@/lib/api-response"
-import { requireUser } from "@/lib/auth/current-user"
+import { requireAuthContext } from "@/lib/auth/current-user"
 
 export async function GET() {
   try {
-    const user = await requireUser()
-    return success(await VehicleQueries.dashboard(user))
+    const ctx = await requireAuthContext()
+    return success(await VehicleQueries.dashboard(ctx))
   } catch (error) {
     return failure(error)
   }

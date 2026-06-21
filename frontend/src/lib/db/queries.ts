@@ -1,7 +1,8 @@
-import { and, desc, eq, ilike, isNotNull, notIlike, or, sql, type SQL } from "drizzle-orm"
+import { and, desc, eq, ilike, isNotNull, lt, notIlike, or, sql, type SQL } from "drizzle-orm"
 
 import { db } from "@/lib/db"
 import { vehicles, type VehicleRow } from "@/lib/db/schema"
+import { ActivityQueries } from "@/lib/db/activity-queries"
 import type { Role } from "@/lib/auth/session"
 import type {
   DashboardStats,
@@ -14,6 +15,24 @@ export interface AuthContext {
   role: Role
   /** Имя менеджера — должно совпадать с vehicles.manager для своих записей. */
   name: string
+  userId: number | null
+}
+
+const STATUS_AFTER_EXPIRY = "Доступен для продажи"
+
+function bookingFieldsFromInput(input: Partial<VehicleInput>) {
+  const values: Record<string, unknown> = {}
+  if ("bookingDays" in input) {
+    const days = (input as Partial<VehicleInput> & { bookingDays?: number | null }).bookingDays
+    if (days && days > 0) {
+      values.bookingDays = days
+      values.bookingExpiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000)
+    } else {
+      values.bookingDays = null
+      values.bookingExpiresAt = null
+    }
+  }
+  return values
 }
 
 function toVehicle(row: VehicleRow): Vehicle {
@@ -54,6 +73,8 @@ function toVehicle(row: VehicleRow): Vehicle {
     carrier: row.carrier,
     route: row.route,
     yearSecondary: row.yearSecondary,
+    bookingDays: row.bookingDays,
+    bookingExpiresAt: row.bookingExpiresAt ? row.bookingExpiresAt.toISOString() : "",
     updatedAt: row.updatedAt ? row.updatedAt.toISOString() : "",
   }
 }
@@ -104,11 +125,20 @@ export const VehicleQueries = {
     return vehicle
   },
 
-  async create(input: VehicleInput): Promise<Vehicle> {
+  async create(input: VehicleInput, ctx: AuthContext): Promise<Vehicle> {
     const [row] = await db
       .insert(vehicles)
-      .values({ ...toInsertValues(input), updatedAt: new Date() })
+      .values({
+        ...toInsertValues(input),
+        ...bookingFieldsFromInput(input),
+        updatedAt: new Date(),
+      })
       .returning()
+    await ActivityQueries.log(ctx, {
+      vehicleId: row.id,
+      action: "create",
+      summary: `Добавлена техника: ${row.vehicleType} ${row.model}`.trim(),
+    })
     return toVehicle(row)
   },
 
@@ -118,6 +148,7 @@ export const VehicleQueries = {
 
     const values = toInsertValues(input)
     delete values.id
+    Object.assign(values, bookingFieldsFromInput(input))
 
     if (ctx.role === "manager") {
       // Менеджер не может присвоить технику другому менеджеру или снять
@@ -131,15 +162,27 @@ export const VehicleQueries = {
       .where(eq(vehicles.id, id))
       .returning()
     if (!row) throw new Error(`Техника с id=${id} не найдена`)
+
+    const changedFields = Object.keys(values).join(", ")
+    await ActivityQueries.log(ctx, {
+      vehicleId: row.id,
+      action: "update",
+      summary: changedFields ? `Изменены поля: ${changedFields}` : "Обновление",
+    })
     return toVehicle(row)
   },
 
-  async remove(id: number): Promise<{ id: number }> {
+  async remove(id: number, ctx: AuthContext): Promise<{ id: number }> {
     const [row] = await db
       .delete(vehicles)
       .where(eq(vehicles.id, id))
-      .returning({ id: vehicles.id })
+      .returning({ id: vehicles.id, vehicleType: vehicles.vehicleType, model: vehicles.model })
     if (!row) throw new Error(`Техника с id=${id} не найдена`)
+    await ActivityQueries.log(ctx, {
+      vehicleId: row.id,
+      action: "delete",
+      summary: `Удалена техника: ${row.vehicleType} ${row.model}`.trim(),
+    })
     return { id: row.id }
   },
 
@@ -236,6 +279,16 @@ export const VehicleQueries = {
       .orderBy(desc(vehicles.updatedAt))
       .limit(10)
 
+    const bookingsByType: Record<string, number> = {}
+    for (const vehicle of all) {
+      if (!vehicle.status.trim().toLowerCase().includes("брон")) continue
+      const type = vehicle.vehicleType || "Не указано"
+      bookingsByType[type] = (bookingsByType[type] ?? 0) + 1
+    }
+
+    // Чужая активность — закрытая информация для manager, видна только owner.
+    const managerActivity = ctx.role === "owner" ? await ActivityQueries.last24h() : []
+
     return {
       total: all.length,
       available,
@@ -244,6 +297,35 @@ export const VehicleQueries = {
       repair,
       awaitingPayment,
       recentChanges: recentChanges.map(toVehicle),
+      bookingsByType,
+      managerActivity,
     }
+  },
+
+  /** Снимает истёкшие брони (вызывается из /api/cron/expire-bookings). */
+  async expireBookings(): Promise<Vehicle[]> {
+    const rows = await db
+      .update(vehicles)
+      .set({
+        status: STATUS_AFTER_EXPIRY,
+        manager: "",
+        buyerCompany: "",
+        contract: "",
+        bookingDate: "",
+        paymentStatus: "",
+        paymentDate: "",
+        bookingDays: null,
+        bookingExpiresAt: null,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          isNotNull(vehicles.bookingExpiresAt),
+          lt(vehicles.bookingExpiresAt, new Date()),
+          eq(vehicles.archived, false)
+        )
+      )
+      .returning()
+    return rows.map(toVehicle)
   },
 }
