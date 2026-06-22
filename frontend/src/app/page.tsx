@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation"
 import { Boxes, CheckCircle2, Wallet, CalendarClock, Wrench, PackageCheck } from "lucide-react"
 
 import { useDashboard } from "@/hooks/use-dashboard"
+import { useCurrentUser } from "@/hooks/use-current-user"
 import { StatCard } from "@/components/dashboard/stat-card"
 import { RecentChanges } from "@/components/dashboard/recent-changes"
+import { ExportPdfButton } from "@/components/dashboard/export-pdf-button"
 import { BackgroundPaths } from "@/components/ui/background-paths"
 import { BreakdownCard } from "@/components/stats/breakdown-card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -28,6 +30,7 @@ export default function DashboardPage() {
   const router = useRouter()
   const [activityHours, setActivityHours] = useState(24)
   const { data, isLoading, isError, error } = useDashboard(activityHours)
+  const { data: currentUser } = useCurrentUser()
 
   if (isError) {
     return (
@@ -58,6 +61,11 @@ export default function DashboardPage() {
         actionLabel="Перейти к остаткам"
         onAction={() => router.push("/vehicles")}
       />
+      {currentUser?.role === "owner" && (
+        <div className="flex justify-end">
+          <ExportPdfButton />
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
         <StatCard title="Всего техники" value={data.total} icon={Boxes} accent="navy" />
         <StatCard title="Доступно" value={data.available} icon={CheckCircle2} accent="seafoam" />

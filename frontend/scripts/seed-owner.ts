@@ -1,7 +1,7 @@
 import { config } from "dotenv"
 config({ path: ".env.local" })
 
-import { Pool } from "@neondatabase/serverless"
+import { Pool, neonConfig } from "@neondatabase/serverless"
 import { drizzle } from "drizzle-orm/neon-serverless"
 
 import { users } from "../src/lib/db/schema"
@@ -13,6 +13,13 @@ async function main() {
   const name = process.argv[4]
   if (!email || !password || !name) {
     throw new Error("Использование: tsx seed-owner.ts <email> <password> <name>")
+  }
+
+  if (process.env.LOCAL_WSPROXY_PORT) {
+    const port = process.env.LOCAL_WSPROXY_PORT
+    neonConfig.wsProxy = (host) => `${host}:${port}/v1`
+    neonConfig.useSecureWebSocket = false
+    neonConfig.pipelineConnect = false
   }
 
   const pool = new Pool({ connectionString: process.env.DATABASE_URL })

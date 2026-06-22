@@ -37,6 +37,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# drizzle-kit generate — артефакт локального bootstrap'а (проект использует drizzle-kit push)
+/drizzle
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
