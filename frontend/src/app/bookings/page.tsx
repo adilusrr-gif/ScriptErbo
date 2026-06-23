@@ -1,12 +1,14 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Search } from "lucide-react"
+import { LayoutGrid, Search, Table2 } from "lucide-react"
 
 import { useDeleteVehicle, useUpdateVehicle, useVehicles } from "@/hooks/use-vehicles"
 import { VehicleTable } from "@/components/vehicles/vehicle-table"
 import { BookVehicleDialog } from "@/components/vehicles/book-vehicle-dialog"
+import { BookingCard } from "@/components/bookings/booking-card"
 import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   AlertDialog,
@@ -28,6 +30,7 @@ export default function BookingsPage() {
   const deleteVehicle = useDeleteVehicle()
   const [search, setSearch] = useState("")
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null)
+  const [view, setView] = useState<"cards" | "table">("cards")
 
   const bookings = useMemo(() => {
     if (!data) return []
@@ -63,17 +66,45 @@ export default function BookingsPage() {
             className="pl-8"
           />
         </div>
-        <BookVehicleDialog
-          vehicles={data ?? []}
-          onBook={handleBook}
-          isSubmitting={updateVehicle.isPending}
-        />
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1">
+            <Button
+              variant={view === "cards" ? "secondary" : "ghost"}
+              size="icon"
+              onClick={() => setView("cards")}
+              aria-label="Карточки"
+            >
+              <LayoutGrid className="size-4" />
+            </Button>
+            <Button
+              variant={view === "table" ? "secondary" : "ghost"}
+              size="icon"
+              onClick={() => setView("table")}
+              aria-label="Таблица"
+            >
+              <Table2 className="size-4" />
+            </Button>
+          </div>
+          <BookVehicleDialog
+            vehicles={data ?? []}
+            onBook={handleBook}
+            isSubmitting={updateVehicle.isPending}
+          />
+        </div>
       </div>
 
       {isError ? (
         <p className="text-sm text-destructive">Не удалось загрузить бронь: {error.message}</p>
       ) : isLoading ? (
         <Skeleton className="h-96" />
+      ) : bookings.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Нет активных бронирований</p>
+      ) : view === "cards" ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {bookings.map((vehicle) => (
+            <BookingCard key={vehicle.id} vehicle={vehicle} />
+          ))}
+        </div>
       ) : (
         <VehicleTable
           vehicles={bookings}

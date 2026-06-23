@@ -12,7 +12,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { QuickEditText } from "@/components/vehicles/quick-edit-text"
-import { paymentBadgeVariant, statusBadgeVariant } from "@/lib/constants"
+import { QuickEditSelect } from "@/components/vehicles/quick-edit-select"
+import { paymentBadgeVariant, statusBadgeVariant, STATUS_OPTIONS } from "@/lib/constants"
 import type { Vehicle } from "@/types/vehicle"
 
 interface ColumnActions {
@@ -58,6 +59,7 @@ export function buildVehicleColumns({
       header: sortableHeader("№"),
       cell: ({ row }) => <span className="text-muted-foreground">{row.original.id}</span>,
       size: 60,
+      enableHiding: false,
     },
     {
       accessorKey: "vehicleType",
@@ -95,8 +97,9 @@ export function buildVehicleColumns({
       accessorKey: "status",
       header: "Статус",
       cell: ({ row }) => (
-        <QuickEditText
+        <QuickEditSelect
           value={row.original.status}
+          options={STATUS_OPTIONS}
           placeholder="Не указан"
           badgeVariant={statusBadgeVariant}
           onSave={(value) => onUpdateField(row.original.id, "status", value)}
@@ -135,6 +138,7 @@ export function buildVehicleColumns({
     },
     {
       id: "actions",
+      enableHiding: false,
       cell: ({ row }) => (
         <DropdownMenu>
           <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="size-7" />}>

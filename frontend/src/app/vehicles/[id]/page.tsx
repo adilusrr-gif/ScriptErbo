@@ -2,11 +2,12 @@
 
 import { useParams, useRouter } from "next/navigation"
 import { useState } from "react"
-import { Trash2 } from "lucide-react"
+import { Pencil, Trash2 } from "lucide-react"
 
 import { useDeleteVehicle, useUpdateVehicle, useVehicle } from "@/hooks/use-vehicles"
 import { useCurrentUser } from "@/hooks/use-current-user"
 import { VehicleForm } from "@/components/vehicles/vehicle-form"
+import { VehicleSummary } from "@/components/vehicles/vehicle-summary"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -33,9 +34,10 @@ export default function VehicleDetailPage() {
   const updateVehicle = useUpdateVehicle()
   const deleteVehicle = useDeleteVehicle()
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [editing, setEditing] = useState(false)
 
   function handleSubmit(values: VehicleFormValues) {
-    updateVehicle.mutate({ id, data: values })
+    updateVehicle.mutate({ id, data: values }, { onSuccess: () => setEditing(false) })
   }
 
   function handleDelete() {
@@ -61,35 +63,51 @@ export default function VehicleDetailPage() {
           ID {vehicle.id} · обновлено{" "}
           {vehicle.updatedAt ? new Date(vehicle.updatedAt).toLocaleString("ru-RU") : "—"}
         </p>
-        {isOwner && (
-          <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-            <AlertDialogTrigger render={<Button variant="destructive" size="sm" />}>
-              <Trash2 className="mr-2 size-4" />
-              Удалить
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Удалить технику?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Действие необратимо. Запись будет удалена из базы данных.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Отмена</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete}>Удалить</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        )}
+        <div className="flex gap-2">
+          {editing ? (
+            <Button variant="ghost" size="sm" onClick={() => setEditing(false)}>
+              Отмена
+            </Button>
+          ) : (
+            <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+              <Pencil className="mr-2 size-4" />
+              Редактировать
+            </Button>
+          )}
+          {isOwner && (
+            <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+              <AlertDialogTrigger render={<Button variant="destructive" size="sm" />}>
+                <Trash2 className="mr-2 size-4" />
+                Удалить
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Удалить технику?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Действие необратимо. Запись будет удалена из базы данных.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Отмена</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete}>Удалить</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+        </div>
       </div>
 
-      <VehicleForm
-        key={vehicle.id}
-        defaultValues={defaultValues}
-        onSubmit={handleSubmit}
-        isSubmitting={updateVehicle.isPending}
-        submitLabel="Сохранить"
-      />
+      {editing ? (
+        <VehicleForm
+          key={vehicle.id}
+          defaultValues={defaultValues}
+          onSubmit={handleSubmit}
+          isSubmitting={updateVehicle.isPending}
+          submitLabel="Сохранить"
+        />
+      ) : (
+        <VehicleSummary vehicle={vehicle} />
+      )}
     </div>
   )
 }

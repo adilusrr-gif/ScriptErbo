@@ -46,7 +46,7 @@ export function QuickEditText({ value, onSave, placeholder, badgeVariant }: Quic
             {value || placeholder || "—"}
           </span>
         )}
-        <Pencil className="size-3 text-muted-foreground opacity-0 group-hover:opacity-100" />
+        <Pencil className="size-3 text-muted-foreground opacity-40 group-hover:opacity-100" />
       </PopoverTrigger>
       <PopoverContent
         className="w-56 p-2"

@@ -9,6 +9,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -31,7 +38,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
-import { statusBadgeVariant } from "@/lib/constants"
+import { statusBadgeVariant, STATUS_OPTIONS } from "@/lib/constants"
 import {
   bookingFormDefaults,
   bookingFormSchema,
@@ -152,7 +159,18 @@ export function BookVehicleDialog({ vehicles, onBook, isSubmitting }: BookVehicl
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Статус</FormLabel>
-                        <FormControl><Input {...field} /></FormControl>
+                        <Select value={field.value} onValueChange={(value) => field.onChange(value ?? "")}>
+                          <FormControl>
+                            <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {STATUS_OPTIONS.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}

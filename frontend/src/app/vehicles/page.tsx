@@ -25,6 +25,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { toText } from "@/lib/utils"
+import { paymentPercent } from "@/lib/constants"
 import { useCurrentUser } from "@/hooks/use-current-user"
 import type { Vehicle } from "@/types/vehicle"
 
@@ -57,6 +58,17 @@ function matchesFilters(vehicle: Vehicle, filters: VehicleListFilters) {
   return true
 }
 
+/** Отдельный от видимых фильтров параметр для ссылок "Продано"/"Ожидает
+ *  оплаты" на Dashboard — использует ту же paymentPercent, что и подсчёт
+ *  статистики, чтобы число на карточке и список совпадали в точности. */
+function matchesPaymentBucket(vehicle: Vehicle, bucket: string | null) {
+  if (!bucket) return true
+  const percent = paymentPercent(vehicle.paymentStatus)
+  if (bucket === "sold") return percent !== null && percent >= 100
+  if (bucket === "awaiting") return percent !== null && percent < 100
+  return true
+}
+
 function filtersFromSearchParams(searchParams: URLSearchParams): VehicleListFilters {
   return {
     search: searchParams.get("search") ?? defaultVehicleListFilters.search,
@@ -79,11 +91,14 @@ function VehiclesPageContent() {
     filtersFromSearchParams(searchParams)
   )
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null)
+  const paymentBucket = searchParams.get("paymentBucket")
 
   const filtered = useMemo(() => {
     if (!data) return []
-    return data.filter((vehicle) => matchesFilters(vehicle, filters))
-  }, [data, filters])
+    return data.filter(
+      (vehicle) => matchesFilters(vehicle, filters) && matchesPaymentBucket(vehicle, paymentBucket)
+    )
+  }, [data, filters, paymentBucket])
 
   function handleUpdateField(id: number, field: keyof Vehicle, value: string) {
     updateVehicle.mutate({ id, data: { [field]: value } })

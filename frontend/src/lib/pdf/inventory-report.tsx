@@ -1,6 +1,7 @@
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer"
 
 import type { Vehicle } from "@/types/vehicle"
+import type { ReportSectionId } from "@/lib/pdf/report-sections"
 
 export interface ManagerGroup {
   manager: string
@@ -8,22 +9,27 @@ export interface ManagerGroup {
   available: number
   booked: number
   sold: number
+  rented: number
   repair: number
   vehicles: Vehicle[]
 }
 
 export interface InventoryReportData {
   generatedAt: string
+  sections: ReportSectionId[]
   summary: {
     total: number
     available: number
     booked: number
     sold: number
+    rented: number
     repair: number
     awaitingPayment: number
   }
   availableVehicles: Vehicle[]
   bookedVehicles: Vehicle[]
+  soldVehicles: Vehicle[]
+  rentedVehicles: Vehicle[]
   managerGroups: ManagerGroup[]
 }
 
@@ -103,6 +109,24 @@ const BOOKED_COLUMNS: Column[] = [
   { header: "Истекает", width: "14%", accessor: (v) => formatDate(v.bookingExpiresAt) },
 ]
 
+const SOLD_COLUMNS: Column[] = [
+  { header: "Тип", width: "16%", accessor: (v) => v.vehicleType || "—" },
+  { header: "Модель", width: "18%", accessor: (v) => v.model || "—" },
+  { header: "Менеджер", width: "14%", accessor: (v) => v.manager || "—" },
+  { header: "Покупатель", width: "20%", accessor: (v) => v.buyerCompany || "—" },
+  { header: "Договор", width: "14%", accessor: (v) => v.contract || "—" },
+  { header: "Оплата", width: "10%", accessor: (v) => v.paymentStatus || "—" },
+]
+
+const RENTED_COLUMNS: Column[] = [
+  { header: "Тип", width: "16%", accessor: (v) => v.vehicleType || "—" },
+  { header: "Модель", width: "18%", accessor: (v) => v.model || "—" },
+  { header: "Менеджер", width: "14%", accessor: (v) => v.manager || "—" },
+  { header: "Компания", width: "20%", accessor: (v) => v.company || v.buyerCompany || "—" },
+  { header: "Локация", width: "18%", accessor: (v) => v.location || "—" },
+  { header: "Оплата", width: "10%", accessor: (v) => v.paymentStatus || "—" },
+]
+
 const MANAGER_COLUMNS: Column[] = [
   { header: "Тип", width: "14%", accessor: (v) => v.vehicleType || "—" },
   { header: "Модель", width: "18%", accessor: (v) => v.model || "—" },
@@ -146,7 +170,18 @@ function VehicleTable({ columns, vehicles }: { columns: Column[]; vehicles: Vehi
 }
 
 export function InventoryReport({ data }: { data: InventoryReportData }) {
-  const { generatedAt, summary, availableVehicles, bookedVehicles, managerGroups } = data
+  const {
+    generatedAt,
+    sections,
+    summary,
+    availableVehicles,
+    bookedVehicles,
+    soldVehicles,
+    rentedVehicles,
+    managerGroups,
+  } = data
+
+  const has = (id: ReportSectionId) => sections.includes(id)
 
   return (
     <Document title="Отчёт по остаткам техники — ScriptErbo">
@@ -159,48 +194,81 @@ export function InventoryReport({ data }: { data: InventoryReportData }) {
             <Text style={styles.summaryValue}>{summary.total}</Text>
             <Text style={styles.summaryLabel}>Всего техники</Text>
           </View>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryValue}>{summary.available}</Text>
-            <Text style={styles.summaryLabel}>Остаток (доступно)</Text>
-          </View>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryValue}>{summary.booked}</Text>
-            <Text style={styles.summaryLabel}>На брони</Text>
-          </View>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryValue}>{summary.sold}</Text>
-            <Text style={styles.summaryLabel}>Продано</Text>
-          </View>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryValue}>{summary.repair}</Text>
-            <Text style={styles.summaryLabel}>В ремонте</Text>
-          </View>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryValue}>{summary.awaitingPayment}</Text>
-            <Text style={styles.summaryLabel}>Ожидает оплаты</Text>
-          </View>
+          {has("available") && (
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryValue}>{summary.available}</Text>
+              <Text style={styles.summaryLabel}>Остаток (доступно)</Text>
+            </View>
+          )}
+          {has("booked") && (
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryValue}>{summary.booked}</Text>
+              <Text style={styles.summaryLabel}>На брони</Text>
+            </View>
+          )}
+          {has("sold") && (
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryValue}>{summary.sold}</Text>
+              <Text style={styles.summaryLabel}>Продано</Text>
+            </View>
+          )}
+          {has("rented") && (
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryValue}>{summary.rented}</Text>
+              <Text style={styles.summaryLabel}>В аренде</Text>
+            </View>
+          )}
         </View>
 
-        <Text style={styles.sectionTitle}>Остаток — доступно для продажи ({availableVehicles.length})</Text>
-        <VehicleTable columns={AVAILABLE_COLUMNS} vehicles={availableVehicles} />
+        {has("available") && (
+          <>
+            <Text style={styles.sectionTitle}>
+              Остаток — доступно для продажи ({availableVehicles.length})
+            </Text>
+            <VehicleTable columns={AVAILABLE_COLUMNS} vehicles={availableVehicles} />
+          </>
+        )}
 
-        <Text style={styles.sectionTitle}>На брони ({bookedVehicles.length})</Text>
-        <VehicleTable columns={BOOKED_COLUMNS} vehicles={bookedVehicles} />
+        {has("booked") && (
+          <>
+            <Text style={styles.sectionTitle}>Забронировано ({bookedVehicles.length})</Text>
+            <VehicleTable columns={BOOKED_COLUMNS} vehicles={bookedVehicles} />
+          </>
+        )}
 
-        <Text style={styles.sectionTitle}>Работа по менеджерам</Text>
-        {managerGroups.length === 0 ? (
-          <Text style={styles.empty}>Нет техники, привязанной к менеджерам</Text>
-        ) : (
-          managerGroups.map((group) => (
-            <View key={group.manager} wrap={false}>
-              <Text style={styles.managerHeading}>{group.manager}</Text>
-              <Text style={styles.managerStats}>
-                Всего: {group.total} · Остаток: {group.available} · Бронь: {group.booked} · Продано:{" "}
-                {group.sold} · Ремонт: {group.repair}
-              </Text>
-              <VehicleTable columns={MANAGER_COLUMNS} vehicles={group.vehicles} />
-            </View>
-          ))
+        {has("sold") && (
+          <>
+            <Text style={styles.sectionTitle}>Продано ({soldVehicles.length})</Text>
+            <VehicleTable columns={SOLD_COLUMNS} vehicles={soldVehicles} />
+          </>
+        )}
+
+        {has("rented") && (
+          <>
+            <Text style={styles.sectionTitle}>В аренде ({rentedVehicles.length})</Text>
+            <VehicleTable columns={RENTED_COLUMNS} vehicles={rentedVehicles} />
+          </>
+        )}
+
+        {has("managers") && (
+          <>
+            <Text style={styles.sectionTitle}>Показатели по менеджерам</Text>
+            {managerGroups.length === 0 ? (
+              <Text style={styles.empty}>Нет техники, привязанной к менеджерам</Text>
+            ) : (
+              managerGroups.map((group) => (
+                <View key={group.manager} wrap={false}>
+                  <Text style={styles.managerHeading}>{group.manager}</Text>
+                  <Text style={styles.managerStats}>
+                    Всего: {group.total} · Остаток: {group.available} · Забронировано:{" "}
+                    {group.booked} · Продано: {group.sold} · В аренде: {group.rented} · Ремонт:{" "}
+                    {group.repair}
+                  </Text>
+                  <VehicleTable columns={MANAGER_COLUMNS} vehicles={group.vehicles} />
+                </View>
+              ))
+            )}
+          </>
         )}
 
         <Text

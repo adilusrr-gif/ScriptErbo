@@ -4,6 +4,7 @@ import { VehicleQueries } from "@/lib/db/queries"
 import { requireOwner, toAuthContext } from "@/lib/auth/current-user"
 import { registerPdfFonts } from "@/lib/pdf/fonts"
 import { InventoryReport, type ManagerGroup } from "@/lib/pdf/inventory-report"
+import { ALL_REPORT_SECTION_IDS, type ReportSectionId } from "@/lib/pdf/report-sections"
 import type { Vehicle } from "@/types/vehicle"
 
 function isAvailable(v: Vehicle) {
@@ -14,6 +15,10 @@ function isBooked(v: Vehicle) {
   return v.status.trim().toLowerCase().includes("брон")
 }
 
+function isRented(v: Vehicle) {
+  return v.status.trim().toLowerCase().includes("аренд")
+}
+
 function isRepair(v: Vehicle) {
   return v.status.trim().toLowerCase().includes("ремонт")
 }
@@ -21,6 +26,13 @@ function isRepair(v: Vehicle) {
 function isSold(v: Vehicle) {
   const match = v.paymentStatus.match(/(\d+)\s*%/)
   return match ? Number(match[1]) >= 100 : false
+}
+
+function parseSections(value: string | null): ReportSectionId[] {
+  if (!value) return ALL_REPORT_SECTION_IDS
+  const requested = value.split(",").map((s) => s.trim())
+  const valid = ALL_REPORT_SECTION_IDS.filter((id) => requested.includes(id))
+  return valid.length > 0 ? valid : ALL_REPORT_SECTION_IDS
 }
 
 function buildManagerGroups(vehicles: Vehicle[]): ManagerGroup[] {
@@ -39,20 +51,26 @@ function buildManagerGroups(vehicles: Vehicle[]): ManagerGroup[] {
       available: group.filter(isAvailable).length,
       booked: group.filter(isBooked).length,
       sold: group.filter(isSold).length,
+      rented: group.filter(isRented).length,
       repair: group.filter(isRepair).length,
       vehicles: group,
     }))
     .sort((a, b) => b.total - a.total)
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const session = await requireOwner()
     const ctx = toAuthContext(session)
     const vehicles = await VehicleQueries.getAll(ctx)
 
+    const { searchParams } = new URL(request.url)
+    const sections = parseSections(searchParams.get("sections"))
+
     const availableVehicles = vehicles.filter(isAvailable)
     const bookedVehicles = vehicles.filter(isBooked)
+    const soldVehicles = vehicles.filter(isSold)
+    const rentedVehicles = vehicles.filter(isRented)
 
     registerPdfFonts()
     const buffer = await renderToBuffer(
@@ -62,17 +80,21 @@ export async function GET() {
             dateStyle: "long",
             timeStyle: "short",
           }),
+          sections,
           summary: {
             total: vehicles.length,
             available: availableVehicles.length,
             booked: bookedVehicles.length,
-            sold: vehicles.filter(isSold).length,
+            sold: soldVehicles.length,
+            rented: rentedVehicles.length,
             repair: vehicles.filter(isRepair).length,
             awaitingPayment: vehicles.filter((v) => v.paymentStatus.match(/\d+\s*%/) && !isSold(v))
               .length,
           },
           availableVehicles,
           bookedVehicles,
+          soldVehicles,
+          rentedVehicles,
           managerGroups: buildManagerGroups(vehicles),
         },
       })

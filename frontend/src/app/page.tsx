@@ -9,9 +9,9 @@ import { useCurrentUser } from "@/hooks/use-current-user"
 import { StatCard } from "@/components/dashboard/stat-card"
 import { RecentChanges } from "@/components/dashboard/recent-changes"
 import { ExportPdfButton } from "@/components/dashboard/export-pdf-button"
+import { DashboardSkeleton } from "@/components/dashboard/dashboard-skeleton"
 import { BackgroundPaths } from "@/components/ui/background-paths"
 import { BreakdownCard } from "@/components/stats/breakdown-card"
-import { Skeleton } from "@/components/ui/skeleton"
 import {
   Select,
   SelectContent,
@@ -32,24 +32,6 @@ export default function DashboardPage() {
   const { data, isLoading, isError, error } = useDashboard(activityHours)
   const { data: currentUser } = useCurrentUser()
 
-  if (isError) {
-    return (
-      <p className="text-sm text-destructive">
-        Не удалось загрузить данные: {error.message}
-      </p>
-    )
-  }
-
-  if (isLoading || !data) {
-    return (
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <Skeleton key={i} className="h-24" />
-        ))}
-      </div>
-    )
-  }
-
   const activityPeriodLabel = ACTIVITY_PERIODS.find((p) => p.hours === activityHours)?.label
 
   return (
@@ -66,55 +48,96 @@ export default function DashboardPage() {
           <ExportPdfButton />
         </div>
       )}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
-        <StatCard title="Всего техники" value={data.total} icon={Boxes} accent="navy" />
-        <StatCard title="Доступно" value={data.available} icon={CheckCircle2} accent="seafoam" />
-        <StatCard title="Бронь" value={data.booked} icon={CalendarClock} accent="tiffany" />
-        <StatCard title="Продано" value={data.sold} icon={PackageCheck} accent="coral" />
-        <StatCard title="Ремонт" value={data.repair} icon={Wrench} accent="amber" />
-        <StatCard title="Ожидает оплаты" value={data.awaitingPayment} icon={Wallet} accent="tiffany" />
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <BreakdownCard
-          title="Бронь по видам техники"
-          counts={data.bookingsByType}
-          onSelect={(label) =>
-            router.push(`/vehicles?vehicleType=${encodeURIComponent(label)}&status=${encodeURIComponent("Брон")}`)
-          }
-        />
-        {data.managerActivity.length > 0 && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-end">
-              <Select
-                value={String(activityHours)}
-                onValueChange={(v) => v && setActivityHours(Number(v))}
-              >
-                <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {ACTIVITY_PERIODS.map((p) => (
-                    <SelectItem key={p.hours} value={String(p.hours)}>
-                      {p.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <BreakdownCard
-              title={`Активность за ${activityPeriodLabel}`}
-              counts={Object.fromEntries(
-                data.managerActivity.map((a) => [
-                  a.role === "owner" ? `${a.name} (владелец)` : a.name,
-                  a.count,
-                ])
-              )}
-              onSelect={(label) =>
-                router.push(`/vehicles?search=${encodeURIComponent(label.replace(" (владелец)", ""))}`)
-              }
+
+      {isError ? (
+        <p className="text-sm text-destructive">
+          Не удалось загрузить данные: {error.message}
+        </p>
+      ) : isLoading || !data ? (
+        <DashboardSkeleton />
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+            <StatCard title="Всего техники" value={data.total} icon={Boxes} accent="navy" href="/vehicles" />
+            <StatCard
+              title="Доступно"
+              value={data.available}
+              icon={CheckCircle2}
+              accent="seafoam"
+              href={`/vehicles?status=${encodeURIComponent("досту")}`}
+            />
+            <StatCard
+              title="Бронь"
+              value={data.booked}
+              icon={CalendarClock}
+              accent="tiffany"
+              href={`/vehicles?status=${encodeURIComponent("брон")}`}
+            />
+            <StatCard
+              title="Продано"
+              value={data.sold}
+              icon={PackageCheck}
+              accent="coral"
+              href="/vehicles?paymentBucket=sold"
+            />
+            <StatCard
+              title="Ремонт"
+              value={data.repair}
+              icon={Wrench}
+              accent="amber"
+              href={`/vehicles?status=${encodeURIComponent("ремонт")}`}
+            />
+            <StatCard
+              title="Ожидает оплаты"
+              value={data.awaitingPayment}
+              icon={Wallet}
+              accent="tiffany"
+              href="/vehicles?paymentBucket=awaiting"
             />
           </div>
-        )}
-      </div>
-      <RecentChanges vehicles={data.recentChanges} />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <BreakdownCard
+              title="Бронь по видам техники"
+              counts={data.bookingsByType}
+              onSelect={(label) =>
+                router.push(`/vehicles?vehicleType=${encodeURIComponent(label)}&status=${encodeURIComponent("Забронирован")}`)
+              }
+            />
+            {data.managerActivity.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-end">
+                  <Select
+                    value={String(activityHours)}
+                    onValueChange={(v) => v && setActivityHours(Number(v))}
+                  >
+                    <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {ACTIVITY_PERIODS.map((p) => (
+                        <SelectItem key={p.hours} value={String(p.hours)}>
+                          {p.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <BreakdownCard
+                  title={`Активность за ${activityPeriodLabel}`}
+                  counts={Object.fromEntries(
+                    data.managerActivity.map((a) => [
+                      a.role === "owner" ? `${a.name} (владелец)` : a.name,
+                      a.count,
+                    ])
+                  )}
+                  onSelect={(label) =>
+                    router.push(`/vehicles?search=${encodeURIComponent(label.replace(" (владелец)", ""))}`)
+                  }
+                />
+              </div>
+            )}
+          </div>
+          <RecentChanges vehicles={data.recentChanges} />
+        </>
+      )}
     </div>
   )
 }

@@ -14,7 +14,7 @@ export const bookingFormSchema = z.object({
 export type BookingFormValues = z.infer<typeof bookingFormSchema>
 
 export const bookingFormDefaults: BookingFormValues = {
-  status: "БРОНЬ",
+  status: "Забронирован",
   manager: "",
   bookingDate: "",
   bookingDays: 7,

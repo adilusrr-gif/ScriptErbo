@@ -8,7 +8,9 @@ import {
   getSortedRowModel,
   useReactTable,
   type SortingState,
+  type VisibilityState,
 } from "@tanstack/react-table"
+import { Columns3 } from "lucide-react"
 
 import {
   Table,
@@ -19,8 +21,15 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { buildVehicleColumns } from "@/components/vehicles/columns"
 import { useCurrentUser } from "@/hooks/use-current-user"
+import { statusAccentColor } from "@/lib/constants"
 import type { Vehicle } from "@/types/vehicle"
 
 interface VehicleTableProps {
@@ -29,8 +38,21 @@ interface VehicleTableProps {
   onDelete: (id: number) => void
 }
 
+const COLUMN_LABELS: Record<string, string> = {
+  vehicleType: "Вид техники",
+  model: "Модель",
+  year: "Год",
+  vin: "VIN",
+  company: "Компания",
+  status: "Статус",
+  manager: "Менеджер",
+  paymentStatus: "Оплата",
+  arrivalDate: "Дата прибытия",
+}
+
 export function VehicleTable({ vehicles, onUpdateField, onDelete }: VehicleTableProps) {
   const [sorting, setSorting] = useState<SortingState>([])
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
   const { data: currentUser } = useCurrentUser()
 
   const columns = buildVehicleColumns({ onUpdateField, onDelete, isOwner: currentUser?.role === "owner" })
@@ -38,8 +60,9 @@ export function VehicleTable({ vehicles, onUpdateField, onDelete }: VehicleTable
   const table = useReactTable({
     data: vehicles,
     columns,
-    state: { sorting },
+    state: { sorting, columnVisibility },
     onSortingChange: setSorting,
+    onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -48,9 +71,31 @@ export function VehicleTable({ vehicles, onUpdateField, onDelete }: VehicleTable
 
   return (
     <div className="space-y-3">
+      <div className="flex justify-end">
+        <DropdownMenu>
+          <DropdownMenuTrigger render={<Button variant="outline" size="sm" />}>
+            <Columns3 className="size-4" />
+            Столбцы
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {table
+              .getAllLeafColumns()
+              .filter((column) => column.getCanHide())
+              .map((column) => (
+                <DropdownMenuCheckboxItem
+                  key={column.id}
+                  checked={column.getIsVisible()}
+                  onCheckedChange={(checked) => column.toggleVisibility(checked)}
+                >
+                  {COLUMN_LABELS[column.id] ?? column.id}
+                </DropdownMenuCheckboxItem>
+              ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
       <div className="overflow-x-auto rounded-md border bg-background">
         <Table>
-          <TableHeader>
+          <TableHeader className="sticky top-0 z-10 bg-background">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
@@ -66,7 +111,11 @@ export function VehicleTable({ vehicles, onUpdateField, onDelete }: VehicleTable
           <TableBody>
             {table.getRowModel().rows.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
+                <TableRow
+                  key={row.id}
+                  className="border-l-2"
+                  style={{ borderLeftColor: statusAccentColor(row.original.status) }}
+                >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
