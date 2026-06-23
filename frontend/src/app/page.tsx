@@ -58,7 +58,7 @@ export default function DashboardPage() {
       ) : (
         <>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
-            <StatCard title="Всего техники" value={data.total} icon={Boxes} accent="navy" href="/vehicles" />
+            <StatCard title="Всего техники" value={data.total} icon={Boxes} accent="lightblue" href="/vehicles" />
             <StatCard
               title="Доступно"
               value={data.available}
@@ -70,28 +70,28 @@ export default function DashboardPage() {
               title="Бронь"
               value={data.booked}
               icon={CalendarClock}
-              accent="tiffany"
+              accent="orange"
               href={`/vehicles?status=${encodeURIComponent("брон")}`}
             />
             <StatCard
               title="Продано"
               value={data.sold}
               icon={PackageCheck}
-              accent="coral"
+              accent="green"
               href="/vehicles?paymentBucket=sold"
             />
             <StatCard
               title="Ремонт"
               value={data.repair}
               icon={Wrench}
-              accent="amber"
+              accent="red"
               href={`/vehicles?status=${encodeURIComponent("ремонт")}`}
             />
             <StatCard
               title="Ожидает оплаты"
               value={data.awaitingPayment}
               icon={Wallet}
-              accent="tiffany"
+              accent="blue"
               href="/vehicles?paymentBucket=awaiting"
             />
           </div>

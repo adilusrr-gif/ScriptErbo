@@ -7,7 +7,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useCountUp } from "@/hooks/use-count-up"
 import { cn } from "@/lib/utils"
 
-type StatAccent = "tiffany" | "seafoam" | "amber" | "coral" | "navy"
+type StatAccent =
+  | "tiffany"
+  | "seafoam"
+  | "amber"
+  | "coral"
+  | "navy"
+  | "green"
+  | "red"
+  | "orange"
+  | "blue"
+  | "lightblue"
 
 const ACCENT_VAR: Record<StatAccent, string> = {
   tiffany: "var(--chart-1)",
@@ -15,6 +25,11 @@ const ACCENT_VAR: Record<StatAccent, string> = {
   amber: "var(--chart-3)",
   coral: "var(--chart-4)",
   navy: "var(--chart-5)",
+  green: "oklch(0.6 0.15 145)",
+  red: "oklch(0.55 0.2 25)",
+  orange: "oklch(0.68 0.16 55)",
+  blue: "oklch(0.55 0.18 255)",
+  lightblue: "oklch(0.72 0.11 220)",
 }
 
 interface StatCardProps {
